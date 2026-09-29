@@ -26,7 +26,7 @@ class Settings:
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()
 
-    anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-opus-5").strip()
+    anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5").strip()
     openai_image_model: str = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1").strip()
     openai_image_size: str = os.getenv("OPENAI_IMAGE_SIZE", "1024x1024").strip()
     openai_image_quality: str = os.getenv("OPENAI_IMAGE_QUALITY", "high").strip()
