@@ -1,0 +1,15 @@
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+python-multipart==0.0.32
+python-dotenv==1.2.3
+pydantic==2.13.5
+httpx2==2.12.0
+anthropic==1.3.0
+openai==3.7.0
+chromadb==1.5.9
+
+# Optional: only needed for the local embedding fallback used when no
+# OPENAI_API_KEY is configured (app/services/vector_store.py). Pulls in
+# torch, so it's a sizeable install — skip it if you always have an OpenAI
+# key set, since text-embedding-3-small is used instead.
+# sentence-transformers==3.3.1

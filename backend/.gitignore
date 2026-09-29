@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+.env
+app/storage/uploads/*
+app/storage/generated/*
+!app/storage/uploads/.gitkeep
+!app/storage/generated/.gitkeep
+.DS_Store
+data/chroma_db/

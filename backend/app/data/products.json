@@ -1,0 +1,1423 @@
+[
+  {
+    "product_id": "mod-sofa-01",
+    "title": "Halden Low-Profile 3-Seat Sofa",
+    "category": "sofa",
+    "brand": "Nooma",
+    "price": 52460.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-sofa-01",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "charcoal",
+      "grey"
+    ]
+  },
+  {
+    "product_id": "mod-sofa-02",
+    "title": "Riva Track-Arm Sofa in Boucle",
+    "category": "sofa",
+    "brand": "Nooma",
+    "price": 66150.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-sofa-02",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Modern"
+    ],
+    "colors": [
+      "cream",
+      "ivory",
+      "oatmeal"
+    ]
+  },
+  {
+    "product_id": "mod-armchair-01",
+    "title": "Molded Shell Lounge Chair",
+    "category": "armchair",
+    "brand": "Nooma",
+    "price": 18900.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-armchair-01",
+    "image": "/media/categories/armchair.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "white",
+      "grey",
+      "black"
+    ]
+  },
+  {
+    "product_id": "mod-coffee-01",
+    "title": "Disc Sintered-Stone Coffee Table",
+    "category": "coffee table",
+    "brand": "Nooma",
+    "price": 15050.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-coffee-01",
+    "image": "/media/categories/coffee-table.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "white",
+      "grey"
+    ]
+  },
+  {
+    "product_id": "mod-side-01",
+    "title": "C-Shape Metal Side Table",
+    "category": "side table",
+    "brand": "Gridwork",
+    "price": 3320.0,
+    "currency": "INR",
+    "retailer": "Gridwork",
+    "url": "https://example.com/p/mod-side-01",
+    "image": "/media/categories/side-table.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "black",
+      "gold",
+      "brass"
+    ]
+  },
+  {
+    "product_id": "mod-dining-01",
+    "title": "Ellipse Oak-Veneer Dining Table",
+    "category": "dining table",
+    "brand": "Nooma",
+    "price": 34300.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-dining-01",
+    "image": "/media/categories/dining-table.png",
+    "style_tags": [
+      "Modern",
+      "Scandinavian"
+    ],
+    "colors": [
+      "oak",
+      "natural wood"
+    ]
+  },
+  {
+    "product_id": "mod-dchair-01",
+    "title": "Wire-Base Dining Chair (Set of 2)",
+    "category": "dining chair",
+    "brand": "Gridwork",
+    "price": 9100.0,
+    "currency": "INR",
+    "retailer": "Gridwork",
+    "url": "https://example.com/p/mod-dchair-01",
+    "image": "/media/categories/dining-chair.png",
+    "style_tags": [
+      "Modern"
+    ],
+    "colors": [
+      "black",
+      "grey"
+    ]
+  },
+  {
+    "product_id": "mod-rug-01",
+    "title": "Low-Pile Geometric Area Rug 8x10",
+    "category": "rug",
+    "brand": "Weftly",
+    "price": 13300.0,
+    "currency": "INR",
+    "retailer": "Weftly Rugs",
+    "url": "https://example.com/p/mod-rug-01",
+    "image": "/media/categories/rug.png",
+    "style_tags": [
+      "Modern"
+    ],
+    "colors": [
+      "grey",
+      "black",
+      "white"
+    ]
+  },
+  {
+    "product_id": "mod-floorlamp-01",
+    "title": "Arc Floor Lamp with Marble Base",
+    "category": "floor lamp",
+    "brand": "Lumen8",
+    "price": 7350.0,
+    "currency": "INR",
+    "retailer": "Lumen8",
+    "url": "https://example.com/p/mod-floorlamp-01",
+    "image": "/media/categories/floor-lamp.png",
+    "style_tags": [
+      "Modern"
+    ],
+    "colors": [
+      "black",
+      "brass"
+    ]
+  },
+  {
+    "product_id": "mod-tablelamp-01",
+    "title": "Cylinder Ceramic Table Lamp",
+    "category": "table lamp",
+    "brand": "Lumen8",
+    "price": 4200.0,
+    "currency": "INR",
+    "retailer": "Lumen8",
+    "url": "https://example.com/p/mod-tablelamp-01",
+    "image": "/media/categories/table-lamp.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "matte black",
+      "white"
+    ]
+  },
+  {
+    "product_id": "mod-console-01",
+    "title": "Slim Oak-Veneer Media Console",
+    "category": "console",
+    "brand": "Nooma",
+    "price": 21350.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-console-01",
+    "image": "/media/categories/console.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "oak",
+      "walnut"
+    ]
+  },
+  {
+    "product_id": "mod-bookshelf-01",
+    "title": "Powder-Coated Steel Open Bookshelf",
+    "category": "bookshelf",
+    "brand": "Gridwork",
+    "price": 13650.0,
+    "currency": "INR",
+    "retailer": "Gridwork",
+    "url": "https://example.com/p/mod-bookshelf-01",
+    "image": "/media/categories/bookshelf.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "black",
+      "white"
+    ]
+  },
+  {
+    "product_id": "mod-sideboard-01",
+    "title": "Fluted-Front Sideboard",
+    "category": "sideboard",
+    "brand": "Nooma",
+    "price": 29750.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-sideboard-01",
+    "image": "/media/categories/sideboard.png",
+    "style_tags": [
+      "Modern"
+    ],
+    "colors": [
+      "oak",
+      "white"
+    ]
+  },
+  {
+    "product_id": "mod-art-01",
+    "title": "Framed Abstract Colour-Block Print (Set of 3)",
+    "category": "wall art",
+    "brand": "Gallery9",
+    "price": 5780.0,
+    "currency": "INR",
+    "retailer": "Gallery9",
+    "url": "https://example.com/p/mod-art-01",
+    "image": "/media/categories/wall-art.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "neutral",
+      "terracotta",
+      "black"
+    ]
+  },
+  {
+    "product_id": "mod-plant-01",
+    "title": "Faux Fiddle-Leaf Fig in Matte Planter",
+    "category": "plant",
+    "brand": "Verdant",
+    "price": 4200.0,
+    "currency": "INR",
+    "retailer": "Verdant",
+    "url": "https://example.com/p/mod-plant-01",
+    "image": "/media/categories/plant.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "green",
+      "white",
+      "black"
+    ]
+  },
+  {
+    "product_id": "mod-mirror-01",
+    "title": "Thin-Frame Round Wall Mirror 36in",
+    "category": "mirror",
+    "brand": "Gridwork",
+    "price": 6300.0,
+    "currency": "INR",
+    "retailer": "Gridwork",
+    "url": "https://example.com/p/mod-mirror-01",
+    "image": "/media/categories/mirror.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "black",
+      "brass"
+    ]
+  },
+  {
+    "product_id": "min-sofa-01",
+    "title": "Kinfolk Modular 2-Seat Sofa",
+    "category": "sofa",
+    "brand": "Blank",
+    "price": 45150.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-sofa-01",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "oatmeal",
+      "light grey",
+      "white"
+    ]
+  },
+  {
+    "product_id": "min-sofa-02",
+    "title": "Platform Slab Sofa",
+    "category": "sofa",
+    "brand": "Sen",
+    "price": 57750.0,
+    "currency": "INR",
+    "retailer": "Sen",
+    "url": "https://example.com/p/min-sofa-02",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "stone",
+      "greige"
+    ]
+  },
+  {
+    "product_id": "min-armchair-01",
+    "title": "Sling Lounge Chair, Canvas",
+    "category": "armchair",
+    "brand": "Blank",
+    "price": 14700.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-armchair-01",
+    "image": "/media/categories/armchair.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "natural",
+      "off-white"
+    ]
+  },
+  {
+    "product_id": "min-coffee-01",
+    "title": "Monolith Concrete Coffee Table",
+    "category": "coffee table",
+    "brand": "Sen",
+    "price": 12600.0,
+    "currency": "INR",
+    "retailer": "Sen",
+    "url": "https://example.com/p/min-coffee-01",
+    "image": "/media/categories/coffee-table.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "grey",
+      "concrete"
+    ]
+  },
+  {
+    "product_id": "min-side-01",
+    "title": "Pedestal Side Table, Ash",
+    "category": "side table",
+    "brand": "Blank",
+    "price": 4550.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-side-01",
+    "image": "/media/categories/side-table.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "ash",
+      "light wood"
+    ]
+  },
+  {
+    "product_id": "min-dining-01",
+    "title": "Trestle Dining Table, Whitewash Oak",
+    "category": "dining table",
+    "brand": "Sen",
+    "price": 32200.0,
+    "currency": "INR",
+    "retailer": "Sen",
+    "url": "https://example.com/p/min-dining-01",
+    "image": "/media/categories/dining-table.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "whitewash",
+      "light oak"
+    ]
+  },
+  {
+    "product_id": "min-dchair-01",
+    "title": "Bentwood Dining Chair (Set of 2)",
+    "category": "dining chair",
+    "brand": "Blank",
+    "price": 8400.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-dchair-01",
+    "image": "/media/categories/dining-chair.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "natural",
+      "black"
+    ]
+  },
+  {
+    "product_id": "min-rug-01",
+    "title": "Undyed Wool Loop Rug 8x10",
+    "category": "rug",
+    "brand": "Weftly",
+    "price": 11200.0,
+    "currency": "INR",
+    "retailer": "Weftly Rugs",
+    "url": "https://example.com/p/min-rug-01",
+    "image": "/media/categories/rug.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "ivory",
+      "greige"
+    ]
+  },
+  {
+    "product_id": "min-floorlamp-01",
+    "title": "Thin-Stem Reading Floor Lamp",
+    "category": "floor lamp",
+    "brand": "Sen",
+    "price": 5600.0,
+    "currency": "INR",
+    "retailer": "Sen",
+    "url": "https://example.com/p/min-floorlamp-01",
+    "image": "/media/categories/floor-lamp.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "white",
+      "matte black"
+    ]
+  },
+  {
+    "product_id": "min-tablelamp-01",
+    "title": "Paper Globe Table Lamp",
+    "category": "table lamp",
+    "brand": "Sen",
+    "price": 2980.0,
+    "currency": "INR",
+    "retailer": "Sen",
+    "url": "https://example.com/p/min-tablelamp-01",
+    "image": "/media/categories/table-lamp.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "white",
+      "paper"
+    ]
+  },
+  {
+    "product_id": "min-console-01",
+    "title": "Handleless Lacquer Media Cabinet",
+    "category": "console",
+    "brand": "Blank",
+    "price": 19600.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-console-01",
+    "image": "/media/categories/console.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "white",
+      "light grey"
+    ]
+  },
+  {
+    "product_id": "min-bookshelf-01",
+    "title": "Floating Ledge Shelf Set (4)",
+    "category": "bookshelf",
+    "brand": "Sen",
+    "price": 5250.0,
+    "currency": "INR",
+    "retailer": "Sen",
+    "url": "https://example.com/p/min-bookshelf-01",
+    "image": "/media/categories/bookshelf.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "white",
+      "ash"
+    ]
+  },
+  {
+    "product_id": "min-sideboard-01",
+    "title": "Low Two-Door Sideboard, Ash",
+    "category": "sideboard",
+    "brand": "Blank",
+    "price": 25200.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-sideboard-01",
+    "image": "/media/categories/sideboard.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "ash",
+      "white"
+    ]
+  },
+  {
+    "product_id": "min-art-01",
+    "title": "Single-Line Ink Print, Oak Frame",
+    "category": "wall art",
+    "brand": "Gallery9",
+    "price": 3320.0,
+    "currency": "INR",
+    "retailer": "Gallery9",
+    "url": "https://example.com/p/min-art-01",
+    "image": "/media/categories/wall-art.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "white",
+      "black",
+      "oak"
+    ]
+  },
+  {
+    "product_id": "min-plant-01",
+    "title": "Potted Olive Tree, Stone Pot",
+    "category": "plant",
+    "brand": "Verdant",
+    "price": 4900.0,
+    "currency": "INR",
+    "retailer": "Verdant",
+    "url": "https://example.com/p/min-plant-01",
+    "image": "/media/categories/plant.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "green",
+      "stone"
+    ]
+  },
+  {
+    "product_id": "min-mirror-01",
+    "title": "Frameless Leaner Mirror 60in",
+    "category": "mirror",
+    "brand": "Blank",
+    "price": 7350.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-mirror-01",
+    "image": "/media/categories/mirror.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "clear",
+      "silver"
+    ]
+  },
+  {
+    "product_id": "trad-sofa-01",
+    "title": "Rolled-Arm Chesterfield Sofa",
+    "category": "sofa",
+    "brand": "Ashford & Co",
+    "price": 73500.0,
+    "currency": "INR",
+    "retailer": "Ashford & Co",
+    "url": "https://example.com/p/trad-sofa-01",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "burgundy",
+      "brown",
+      "green"
+    ]
+  },
+  {
+    "product_id": "trad-sofa-02",
+    "title": "Camelback Roll-Arm Sofa, Linen",
+    "category": "sofa",
+    "brand": "Wexford",
+    "price": 62300.0,
+    "currency": "INR",
+    "retailer": "Wexford",
+    "url": "https://example.com/p/trad-sofa-02",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "sage",
+      "oatmeal",
+      "navy"
+    ]
+  },
+  {
+    "product_id": "trad-armchair-01",
+    "title": "Tufted Leather Club Chair",
+    "category": "armchair",
+    "brand": "Ashford & Co",
+    "price": 30800.0,
+    "currency": "INR",
+    "retailer": "Ashford & Co",
+    "url": "https://example.com/p/trad-armchair-01",
+    "image": "/media/categories/armchair.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "cognac",
+      "brown"
+    ]
+  },
+  {
+    "product_id": "trad-armchair-02",
+    "title": "Wingback Armchair, Damask",
+    "category": "armchair",
+    "brand": "Wexford",
+    "price": 22400.0,
+    "currency": "INR",
+    "retailer": "Wexford",
+    "url": "https://example.com/p/trad-armchair-02",
+    "image": "/media/categories/armchair.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "deep green",
+      "burgundy",
+      "gold"
+    ]
+  },
+  {
+    "product_id": "trad-coffee-01",
+    "title": "Carved Mahogany Coffee Table",
+    "category": "coffee table",
+    "brand": "Ashford & Co",
+    "price": 23100.0,
+    "currency": "INR",
+    "retailer": "Ashford & Co",
+    "url": "https://example.com/p/trad-coffee-01",
+    "image": "/media/categories/coffee-table.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "dark wood",
+      "mahogany"
+    ]
+  },
+  {
+    "product_id": "trad-side-01",
+    "title": "Pie-Crust Accent Table, Cherry",
+    "category": "side table",
+    "brand": "Wexford",
+    "price": 8400.0,
+    "currency": "INR",
+    "retailer": "Wexford",
+    "url": "https://example.com/p/trad-side-01",
+    "image": "/media/categories/side-table.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "cherry",
+      "dark wood"
+    ]
+  },
+  {
+    "product_id": "trad-dining-01",
+    "title": "Pedestal Extending Dining Table, Walnut",
+    "category": "dining table",
+    "brand": "Ashford & Co",
+    "price": 57750.0,
+    "currency": "INR",
+    "retailer": "Ashford & Co",
+    "url": "https://example.com/p/trad-dining-01",
+    "image": "/media/categories/dining-table.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "walnut",
+      "dark wood"
+    ]
+  },
+  {
+    "product_id": "trad-dchair-01",
+    "title": "Ladder-Back Dining Chair (Set of 2)",
+    "category": "dining chair",
+    "brand": "Wexford",
+    "price": 13300.0,
+    "currency": "INR",
+    "retailer": "Wexford",
+    "url": "https://example.com/p/trad-dchair-01",
+    "image": "/media/categories/dining-chair.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "oak",
+      "rush",
+      "brown"
+    ]
+  },
+  {
+    "product_id": "trad-rug-01",
+    "title": "Persian-Style Medallion Rug 8x10",
+    "category": "rug",
+    "brand": "Heritage Looms",
+    "price": 25200.0,
+    "currency": "INR",
+    "retailer": "Heritage Looms",
+    "url": "https://example.com/p/trad-rug-01",
+    "image": "/media/categories/rug.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "burgundy",
+      "navy",
+      "gold",
+      "cream"
+    ]
+  },
+  {
+    "product_id": "trad-floorlamp-01",
+    "title": "Brass Club Floor Lamp, Pleated Shade",
+    "category": "floor lamp",
+    "brand": "Wexford",
+    "price": 9100.0,
+    "currency": "INR",
+    "retailer": "Wexford",
+    "url": "https://example.com/p/trad-floorlamp-01",
+    "image": "/media/categories/floor-lamp.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "brass",
+      "cream"
+    ]
+  },
+  {
+    "product_id": "trad-tablelamp-01",
+    "title": "Ginger-Jar Table Lamp, Porcelain",
+    "category": "table lamp",
+    "brand": "Heritage Looms",
+    "price": 6300.0,
+    "currency": "INR",
+    "retailer": "Heritage Looms",
+    "url": "https://example.com/p/trad-tablelamp-01",
+    "image": "/media/categories/table-lamp.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "blue",
+      "white",
+      "brass"
+    ]
+  },
+  {
+    "product_id": "trad-bookshelf-01",
+    "title": "Glass-Door Barrister Bookcase",
+    "category": "bookshelf",
+    "brand": "Ashford & Co",
+    "price": 32900.0,
+    "currency": "INR",
+    "retailer": "Ashford & Co",
+    "url": "https://example.com/p/trad-bookshelf-01",
+    "image": "/media/categories/bookshelf.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "mahogany",
+      "dark wood"
+    ]
+  },
+  {
+    "product_id": "trad-sideboard-01",
+    "title": "Inlaid Buffet Sideboard, Walnut",
+    "category": "sideboard",
+    "brand": "Ashford & Co",
+    "price": 44800.0,
+    "currency": "INR",
+    "retailer": "Ashford & Co",
+    "url": "https://example.com/p/trad-sideboard-01",
+    "image": "/media/categories/sideboard.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "walnut",
+      "cherry"
+    ]
+  },
+  {
+    "product_id": "trad-console-01",
+    "title": "Cabinet TV Console with Doors",
+    "category": "console",
+    "brand": "Wexford",
+    "price": 26600.0,
+    "currency": "INR",
+    "retailer": "Wexford",
+    "url": "https://example.com/p/trad-console-01",
+    "image": "/media/categories/console.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "cherry",
+      "dark wood"
+    ]
+  },
+  {
+    "product_id": "trad-art-01",
+    "title": "Gold-Frame Classical Landscape Print",
+    "category": "wall art",
+    "brand": "Gallery9",
+    "price": 6650.0,
+    "currency": "INR",
+    "retailer": "Gallery9",
+    "url": "https://example.com/p/trad-art-01",
+    "image": "/media/categories/wall-art.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "gold",
+      "green",
+      "brown"
+    ]
+  },
+  {
+    "product_id": "trad-mirror-01",
+    "title": "Ornate Gilt Wall Mirror 40in",
+    "category": "mirror",
+    "brand": "Heritage Looms",
+    "price": 11900.0,
+    "currency": "INR",
+    "retailer": "Heritage Looms",
+    "url": "https://example.com/p/trad-mirror-01",
+    "image": "/media/categories/mirror.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "gold",
+      "antique brass"
+    ]
+  },
+  {
+    "product_id": "scn-sofa-01",
+    "title": "Oak-Leg Fabric Sofa, Loose Cushions",
+    "category": "sofa",
+    "brand": "Bjork Living",
+    "price": 41650.0,
+    "currency": "INR",
+    "retailer": "Bjork Living",
+    "url": "https://example.com/p/scn-sofa-01",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "cream",
+      "beige",
+      "light grey"
+    ]
+  },
+  {
+    "product_id": "scn-sofa-02",
+    "title": "Rounded 3-Seat Sofa, Bouclé",
+    "category": "sofa",
+    "brand": "Fjord",
+    "price": 49700.0,
+    "currency": "INR",
+    "retailer": "Fjord",
+    "url": "https://example.com/p/scn-sofa-02",
+    "image": "/media/categories/sofa.png",
+    "style_tags": [
+      "Scandinavian"
+    ],
+    "colors": [
+      "off-white",
+      "sand",
+      "pale blue"
+    ]
+  },
+  {
+    "product_id": "scn-armchair-01",
+    "title": "Wingback Accent Chair, Wool Blend",
+    "category": "armchair",
+    "brand": "Bjork Living",
+    "price": 16100.0,
+    "currency": "INR",
+    "retailer": "Bjork Living",
+    "url": "https://example.com/p/scn-armchair-01",
+    "image": "/media/categories/armchair.png",
+    "style_tags": [
+      "Scandinavian"
+    ],
+    "colors": [
+      "mustard",
+      "grey",
+      "teal"
+    ]
+  },
+  {
+    "product_id": "scn-armchair-02",
+    "title": "Spindle-Back Lounge Chair, Beech",
+    "category": "armchair",
+    "brand": "Fjord",
+    "price": 13650.0,
+    "currency": "INR",
+    "retailer": "Fjord",
+    "url": "https://example.com/p/scn-armchair-02",
+    "image": "/media/categories/armchair.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "beech",
+      "natural wood",
+      "cream"
+    ]
+  },
+  {
+    "product_id": "scn-coffee-01",
+    "title": "Oval Ash-Wood Coffee Table",
+    "category": "coffee table",
+    "brand": "Bjork Living",
+    "price": 10460.0,
+    "currency": "INR",
+    "retailer": "Bjork Living",
+    "url": "https://example.com/p/scn-coffee-01",
+    "image": "/media/categories/coffee-table.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "natural oak",
+      "light wood"
+    ]
+  },
+  {
+    "product_id": "scn-side-01",
+    "title": "Tripod Side Table, Beech",
+    "category": "side table",
+    "brand": "Fjord",
+    "price": 3850.0,
+    "currency": "INR",
+    "retailer": "Fjord",
+    "url": "https://example.com/p/scn-side-01",
+    "image": "/media/categories/side-table.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "beech",
+      "white"
+    ]
+  },
+  {
+    "product_id": "scn-dining-01",
+    "title": "Round Pedestal Dining Table, Oak",
+    "category": "dining table",
+    "brand": "Bjork Living",
+    "price": 27300.0,
+    "currency": "INR",
+    "retailer": "Bjork Living",
+    "url": "https://example.com/p/scn-dining-01",
+    "image": "/media/categories/dining-table.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "oak",
+      "light wood"
+    ]
+  },
+  {
+    "product_id": "scn-dchair-01",
+    "title": "Molded Wood Dining Chair (Set of 2)",
+    "category": "dining chair",
+    "brand": "Fjord",
+    "price": 7700.0,
+    "currency": "INR",
+    "retailer": "Fjord",
+    "url": "https://example.com/p/scn-dchair-01",
+    "image": "/media/categories/dining-chair.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "beech",
+      "white",
+      "grey"
+    ]
+  },
+  {
+    "product_id": "scn-rug-01",
+    "title": "Hand-Woven Wool Rug, Diamond Motif 8x10",
+    "category": "rug",
+    "brand": "Weftly",
+    "price": 11900.0,
+    "currency": "INR",
+    "retailer": "Weftly Rugs",
+    "url": "https://example.com/p/scn-rug-01",
+    "image": "/media/categories/rug.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "ivory",
+      "grey",
+      "charcoal"
+    ]
+  },
+  {
+    "product_id": "scn-floorlamp-01",
+    "title": "Tripod Floor Lamp, Beech + Linen Shade",
+    "category": "floor lamp",
+    "brand": "Bjork Living",
+    "price": 4550.0,
+    "currency": "INR",
+    "retailer": "Bjork Living",
+    "url": "https://example.com/p/scn-floorlamp-01",
+    "image": "/media/categories/floor-lamp.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "natural wood",
+      "white"
+    ]
+  },
+  {
+    "product_id": "scn-tablelamp-01",
+    "title": "Dome Table Lamp, Sage Metal",
+    "category": "table lamp",
+    "brand": "Fjord",
+    "price": 3320.0,
+    "currency": "INR",
+    "retailer": "Fjord",
+    "url": "https://example.com/p/scn-tablelamp-01",
+    "image": "/media/categories/table-lamp.png",
+    "style_tags": [
+      "Scandinavian"
+    ],
+    "colors": [
+      "sage",
+      "blush",
+      "cream"
+    ]
+  },
+  {
+    "product_id": "scn-bookshelf-01",
+    "title": "Oak Ladder Shelf, 4-Tier",
+    "category": "bookshelf",
+    "brand": "Bjork Living",
+    "price": 7700.0,
+    "currency": "INR",
+    "retailer": "Bjork Living",
+    "url": "https://example.com/p/scn-bookshelf-01",
+    "image": "/media/categories/bookshelf.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "natural oak"
+    ]
+  },
+  {
+    "product_id": "scn-sideboard-01",
+    "title": "Tapered-Leg Sideboard, Oak + White",
+    "category": "sideboard",
+    "brand": "Fjord",
+    "price": 24150.0,
+    "currency": "INR",
+    "retailer": "Fjord",
+    "url": "https://example.com/p/scn-sideboard-01",
+    "image": "/media/categories/sideboard.png",
+    "style_tags": [
+      "Scandinavian"
+    ],
+    "colors": [
+      "oak",
+      "white"
+    ]
+  },
+  {
+    "product_id": "scn-console-01",
+    "title": "Slatted Oak Media Bench",
+    "category": "console",
+    "brand": "Bjork Living",
+    "price": 18200.0,
+    "currency": "INR",
+    "retailer": "Bjork Living",
+    "url": "https://example.com/p/scn-console-01",
+    "image": "/media/categories/console.png",
+    "style_tags": [
+      "Scandinavian",
+      "Modern"
+    ],
+    "colors": [
+      "oak",
+      "natural wood"
+    ]
+  },
+  {
+    "product_id": "scn-art-01",
+    "title": "Botanical Line Print Pair, Oak Frames",
+    "category": "wall art",
+    "brand": "Gallery9",
+    "price": 3850.0,
+    "currency": "INR",
+    "retailer": "Gallery9",
+    "url": "https://example.com/p/scn-art-01",
+    "image": "/media/categories/wall-art.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "green",
+      "cream",
+      "oak"
+    ]
+  },
+  {
+    "product_id": "scn-plant-01",
+    "title": "Monstera in Woven Seagrass Basket",
+    "category": "plant",
+    "brand": "Verdant",
+    "price": 3680.0,
+    "currency": "INR",
+    "retailer": "Verdant",
+    "url": "https://example.com/p/scn-plant-01",
+    "image": "/media/categories/plant.png",
+    "style_tags": [
+      "Scandinavian",
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "green",
+      "natural"
+    ]
+  },
+  {
+    "product_id": "scn-throw-01",
+    "title": "Chunky Knit Wool Throw",
+    "category": "textiles",
+    "brand": "Hygge House",
+    "price": 2450.0,
+    "currency": "INR",
+    "retailer": "Hygge House",
+    "url": "https://example.com/p/scn-throw-01",
+    "image": "/media/categories/textiles.png",
+    "style_tags": [
+      "Scandinavian"
+    ],
+    "colors": [
+      "mustard",
+      "cream",
+      "grey"
+    ]
+  },
+  {
+    "product_id": "scn-ottoman-01",
+    "title": "Round Knitted Pouf Ottoman",
+    "category": "ottoman",
+    "brand": "Hygge House",
+    "price": 3150.0,
+    "currency": "INR",
+    "retailer": "Hygge House",
+    "url": "https://example.com/p/scn-ottoman-01",
+    "image": "/media/categories/ottoman.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist"
+    ],
+    "colors": [
+      "grey",
+      "cream",
+      "ochre"
+    ]
+  },
+  {
+    "product_id": "scn-curtains-01",
+    "title": "Linen-Blend Curtain Panels (Pair)",
+    "category": "curtains",
+    "brand": "Draperie",
+    "price": 2800.0,
+    "currency": "INR",
+    "retailer": "Draperie",
+    "url": "https://example.com/p/scn-curtains-01",
+    "image": "/media/categories/curtains.png",
+    "style_tags": [
+      "Scandinavian",
+      "Minimalist",
+      "Traditional"
+    ],
+    "colors": [
+      "oatmeal",
+      "white",
+      "grey"
+    ]
+  },
+  {
+    "product_id": "mod-ottoman-01",
+    "title": "Leather Cube Ottoman",
+    "category": "ottoman",
+    "brand": "Nooma",
+    "price": 8400.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-ottoman-01",
+    "image": "/media/categories/ottoman.png",
+    "style_tags": [
+      "Modern"
+    ],
+    "colors": [
+      "tan",
+      "black"
+    ]
+  },
+  {
+    "product_id": "mod-curtains-01",
+    "title": "Blackout Ripplefold Drapes (Pair)",
+    "category": "curtains",
+    "brand": "Draperie",
+    "price": 4550.0,
+    "currency": "INR",
+    "retailer": "Draperie",
+    "url": "https://example.com/p/mod-curtains-01",
+    "image": "/media/categories/curtains.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "charcoal",
+      "greige",
+      "white"
+    ]
+  },
+  {
+    "product_id": "trad-curtains-01",
+    "title": "Pinch-Pleat Velvet Drapes (Pair)",
+    "category": "curtains",
+    "brand": "Draperie",
+    "price": 6650.0,
+    "currency": "INR",
+    "retailer": "Draperie",
+    "url": "https://example.com/p/trad-curtains-01",
+    "image": "/media/categories/curtains.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "deep green",
+      "burgundy",
+      "gold"
+    ]
+  },
+  {
+    "product_id": "trad-plant-01",
+    "title": "Boston Fern in Footed Urn",
+    "category": "plant",
+    "brand": "Verdant",
+    "price": 3320.0,
+    "currency": "INR",
+    "retailer": "Verdant",
+    "url": "https://example.com/p/trad-plant-01",
+    "image": "/media/categories/plant.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "green",
+      "bronze"
+    ]
+  },
+  {
+    "product_id": "trad-ottoman-01",
+    "title": "Tufted Storage Ottoman, Velvet",
+    "category": "ottoman",
+    "brand": "Wexford",
+    "price": 11200.0,
+    "currency": "INR",
+    "retailer": "Wexford",
+    "url": "https://example.com/p/trad-ottoman-01",
+    "image": "/media/categories/ottoman.png",
+    "style_tags": [
+      "Traditional"
+    ],
+    "colors": [
+      "emerald",
+      "burgundy",
+      "navy"
+    ]
+  },
+  {
+    "product_id": "min-curtains-01",
+    "title": "Sheer Linen Curtain Panels (Pair)",
+    "category": "curtains",
+    "brand": "Draperie",
+    "price": 2620.0,
+    "currency": "INR",
+    "retailer": "Draperie",
+    "url": "https://example.com/p/min-curtains-01",
+    "image": "/media/categories/curtains.png",
+    "style_tags": [
+      "Minimalist",
+      "Scandinavian"
+    ],
+    "colors": [
+      "white",
+      "ivory"
+    ]
+  },
+  {
+    "product_id": "min-ottoman-01",
+    "title": "Felt Drum Ottoman",
+    "category": "ottoman",
+    "brand": "Blank",
+    "price": 4550.0,
+    "currency": "INR",
+    "retailer": "Blank Studio",
+    "url": "https://example.com/p/min-ottoman-01",
+    "image": "/media/categories/ottoman.png",
+    "style_tags": [
+      "Minimalist"
+    ],
+    "colors": [
+      "grey",
+      "charcoal",
+      "oatmeal"
+    ]
+  },
+  {
+    "product_id": "mod-bench-01",
+    "title": "Upholstered Slab Bench",
+    "category": "bench",
+    "brand": "Nooma",
+    "price": 10500.0,
+    "currency": "INR",
+    "retailer": "Nooma Home",
+    "url": "https://example.com/p/mod-bench-01",
+    "image": "/media/categories/bench.png",
+    "style_tags": [
+      "Modern",
+      "Minimalist"
+    ],
+    "colors": [
+      "grey",
+      "tan"
+    ]
+  }
+]

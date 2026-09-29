@@ -1,0 +1,25 @@
+# Secrets — never commit real API keys
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node / build output
+node_modules/
+dist/
+*.local
+
+# Runtime data (user uploads, generated images, rebuilt vector index, logs)
+backend/app/storage/uploads/*
+backend/app/storage/generated/*
+!backend/app/storage/uploads/.gitkeep
+!backend/app/storage/generated/.gitkeep
+backend/data/chroma_db/
+*.log
+
+.DS_Store
+.vercel/
