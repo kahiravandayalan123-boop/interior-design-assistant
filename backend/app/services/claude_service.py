@@ -34,6 +34,12 @@ def _get_client():
     return _client
 
 
+# Opus 5.5 always thinks before answering, and thinking tokens count toward
+# max_tokens — a tight cap truncates the JSON mid-string. This is a ceiling,
+# not a target: the visible replies here are still short.
+_MAX_TOKENS = 16000
+
+
 def _extract_json(text: str) -> Any:
     """Claude usually returns clean JSON; strip code fences / prose just in case."""
     text = (text or "").strip()
@@ -49,6 +55,8 @@ def _extract_json(text: str) -> Any:
 
 
 def _text_of(resp) -> str:
+    if getattr(resp, "stop_reason", None) == "max_tokens":
+        raise ValueError("model response was cut off at max_tokens")
     return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
 
 
@@ -100,7 +108,7 @@ def analyze_room(
     def _real() -> RoomAnalysis:
         resp = _get_client().messages.create(
             model=settings.anthropic_model,
-            max_tokens=1500,
+            max_tokens=_MAX_TOKENS,
             system=ANALYSIS_SYSTEM,
             messages=[
                 {
@@ -155,7 +163,7 @@ def generate_questions(
     def _real() -> list[Question]:
         resp = _get_client().messages.create(
             model=settings.anthropic_model,
-            max_tokens=1000,
+            max_tokens=_MAX_TOKENS,
             system=QUESTIONS_SYSTEM,
             messages=[
                 {
@@ -225,7 +233,7 @@ def build_image_prompt(
     def _real() -> tuple[str, list[FurnitureItem]]:
         resp = _get_client().messages.create(
             model=settings.anthropic_model,
-            max_tokens=1400,
+            max_tokens=_MAX_TOKENS,
             system=PROMPT_SYSTEM,
             messages=[
                 {
@@ -294,7 +302,7 @@ def build_modify_prompt(
     def _real() -> tuple[str, list[FurnitureItem]]:
         resp = _get_client().messages.create(
             model=settings.anthropic_model,
-            max_tokens=1400,
+            max_tokens=_MAX_TOKENS,
             system=MODIFY_SYSTEM,
             messages=[
                 {
