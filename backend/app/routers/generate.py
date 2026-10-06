@@ -18,10 +18,22 @@ from ..schemas import GenerateRequest, GenerateResponse, Question, RecapItem, Ro
 from ..services import claude_service, image_service, recommendation_service
 from ..services.errors import ServiceError
 from ..services.product_service import match_products
+from ..services.upload_validate import sniff
 from ..store import get_session, update_session
 
 router = APIRouter(prefix="/api", tags=["generate"])
 settings = get_settings()
+
+
+def _load_upload(filename: str | None) -> tuple[bytes | None, str]:
+    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+        return None, ""
+    try:
+        data = (settings.upload_dir / filename).read_bytes()
+    except OSError:
+        return None, ""
+    sniffed = sniff(data)
+    return (data, sniffed[0]) if sniffed else (None, "")
 
 
 # Plain `def` so the slow provider calls run in a worker thread (see upload.py).
@@ -53,9 +65,20 @@ def generate(req: GenerateRequest, request: Request):
         [{"question_id": claude_service.EXTRA_REQUEST_ID, "answer": extra_request}] if extra_request else []
     )
 
+    # The user's own photo is the base the redesign is drawn on, so the room's
+    # layout carries over. Uploads live on local disk, so a restart can lose it;
+    # then we still render from the text prompt, but say so.
+    source, source_type = _load_upload(session.get("image_filename"))
+    if source is None:
+        missing = "Your original photo wasn't available, so the redesign is based on the description only."
+        if missing not in warnings:
+            warnings.append(missing)
+
     try:
         prompt, planned, _mock_p, warn_p = claude_service.build_image_prompt(analysis, style, prompt_answers)
-        image = image_service.generate_image(prompt, style, analysis.room_type)
+        image = image_service.generate_image(
+            prompt, style, analysis.room_type, source_image=source, source_media_type=source_type
+        )
     except ServiceError as se:
         raise HTTPException(se.status_code, se.user_message)
 

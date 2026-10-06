@@ -80,7 +80,10 @@ def modify_room(
         prompt, planned, _mock_p, warn_p = claude_service.build_modify_prompt(
             analysis, instruction, budget
         )
-        image_result = image_service.generate_image(prompt, _MATCH_STYLE_FALLBACK, analysis.room_type)
+        image_result = image_service.generate_image(
+            prompt, _MATCH_STYLE_FALLBACK, analysis.room_type,
+            source_image=data, source_media_type=media_type,
+        )
     except ServiceError as se:
         raise HTTPException(se.status_code, se.user_message)
 

@@ -6,9 +6,13 @@ and the "Download image" button work without CORS or expiring URLs).
 
 Readiness:
 * No OPENAI_API_KEY (or FORCE_MOCK) -> a locally synthesized placeholder PNG.
-* Real key -> OpenAI `images.generate` on the `gpt-image-1` family, which
-  always returns inline base64 data (no `response_format` param, and no
-  second request to an expiring CDN URL).
+* Real key + the user's room photo -> OpenAI `images.edit`, so the render is
+  built *on* their photo (same camera angle, walls, windows, doors, stairs)
+  instead of imagining a new room from text alone.
+* Real key, no photo available -> `images.generate` (text-to-image).
+  Both are on the `gpt-image-1` family, which always returns inline base64
+  data (no `response_format` param, and no second request to an expiring CDN
+  URL).
 
 The moment a valid OPENAI_API_KEY is added to backend/.env and the backend is
 restarted, the real path runs with no code change. Transient failures
@@ -90,14 +94,34 @@ def build_dalle_prompt(raw: str, style: str, room_type: str = "room") -> str:
     return framed[:_MAX_PROMPT_CHARS]
 
 
-def generate_image(prompt: str, style: str, room_type: str = "room") -> ImageResult:
-    framed = build_dalle_prompt(prompt, style, room_type)
+# Prepended when editing the user's own photo: the model-written prompt
+# describes the new furnishings, this pins down what must NOT change.
+_EDIT_PREFIX = (
+    "Redesign the room in this exact photo. Keep the same camera angle, framing "
+    "and perspective, and keep the architecture unchanged: walls, ceiling, "
+    "windows, doors, any stairs, floor plan and room proportions must stay "
+    "exactly where they are. Change only the furniture, decor, textiles, lighting fixtures, "
+    "colours and finishes as described: "
+)
 
+
+def generate_image(
+    prompt: str,
+    style: str,
+    room_type: str = "room",
+    source_image: bytes | None = None,
+    source_media_type: str = "image/jpeg",
+) -> ImageResult:
+    """Render the redesign. Pass the user's photo as `source_image` so the
+    output is an edit of their actual room rather than a new invented one."""
     if not settings.openai_ready:
         return ImageResult(_placeholder_png(style), "image/png", mock=True)
 
     try:
-        return _generate_real(framed)
+        if source_image:
+            framed = build_dalle_prompt(_EDIT_PREFIX + (prompt or ""), style, room_type)
+            return _edit_real(framed, source_image, source_media_type)
+        return _generate_real(build_dalle_prompt(prompt, style, room_type))
     except ServiceError:
         raise
     except Exception as exc:  # noqa: BLE001 - classified below
@@ -122,7 +146,31 @@ def _generate_real(framed_prompt: str) -> ImageResult:
     if settings.openai_image_model.startswith("gpt-image"):
         kwargs["quality"] = settings.openai_image_quality
 
-    resp = _get_client().images.generate(**kwargs)
+    return _extract_image(_get_client().images.generate(**kwargs))
+
+
+def _edit_real(framed_prompt: str, source: bytes, media_type: str) -> ImageResult:
+    ext = {"image/png": "png", "image/webp": "webp"}.get(media_type, "jpg")
+    kwargs = dict(
+        model=settings.openai_image_model,
+        image=(f"room.{ext}", source, media_type),
+        prompt=framed_prompt,
+        # "auto" lets the API match the photo's aspect ratio (landscape rooms
+        # stay landscape) instead of squashing everything to a square.
+        size=settings.openai_edit_size if settings.openai_edit_size in _VALID_SIZES else "auto",
+        n=1,
+    )
+    if settings.openai_image_model.startswith("gpt-image"):
+        kwargs["quality"] = settings.openai_image_quality
+        # High fidelity keeps the original layout and details much closer.
+        # Not every model in the family accepts it (e.g. the -mini variants).
+        if settings.openai_input_fidelity and "mini" not in settings.openai_image_model:
+            kwargs["input_fidelity"] = settings.openai_input_fidelity
+
+    return _extract_image(_get_client().images.edit(**kwargs))
+
+
+def _extract_image(resp) -> ImageResult:
     if not getattr(resp, "data", None):
         raise ServiceError(
             "The image service returned an empty response. Please try again.",

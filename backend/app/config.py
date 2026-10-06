@@ -30,6 +30,10 @@ class Settings:
     openai_image_model: str = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1").strip()
     openai_image_size: str = os.getenv("OPENAI_IMAGE_SIZE", "1024x1024").strip()
     openai_image_quality: str = os.getenv("OPENAI_IMAGE_QUALITY", "high").strip()
+    # Used when redesigning the user's own photo (images.edit). "auto" keeps
+    # the photo's aspect ratio; input fidelity "high" preserves its layout.
+    openai_edit_size: str = os.getenv("OPENAI_EDIT_SIZE", "auto").strip()
+    openai_input_fidelity: str = os.getenv("OPENAI_INPUT_FIDELITY", "high").strip()
 
     # Per-request timeouts (seconds). The SDK defaults are 10 minutes with 2
     # retries — far too long for a live demo, where a stuck call should fail
