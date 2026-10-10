@@ -27,7 +27,7 @@ POOL_SIZE = 24
 
 
 # Floor-hungry categories that shouldn't be suggested as extras for a small room.
-_LARGE = ("sofa", "armchair", "dining table", "dining chair", "sideboard", "bookshelf", "console", "bench", "coffee table")
+_LARGE = ("sofa", "armchair", "dining table", "dining chair", "sideboard", "bookshelf", "console", "bench", "coffee table", "ottoman")
 
 
 def _excluded(category: str, exclude: set[str], small_room: bool) -> bool:
