@@ -90,9 +90,11 @@ export async function getConfig() {
   throw last;
 }
 
-export async function uploadRoom({ style, file, roomSize }) {
+// `instruction` is set only by the Modify Existing Room flow (which has no style).
+export async function uploadRoom({ style, file, roomSize, instruction }) {
   const form = new FormData();
-  form.append("style", style);
+  form.append("style", style || "");
+  form.append("instruction", instruction || "");
   form.append("room_size", roomSize || "");
   form.append("image", file);
   return request("/api/upload", { method: "POST", body: form }, TIMEOUT_MS.analyze);

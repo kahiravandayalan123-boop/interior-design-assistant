@@ -405,8 +405,14 @@ def build_image_prompt(
 
 
 def build_modify_prompt(
-    analysis: RoomAnalysis, instruction: str, budget: str | None
+    analysis: RoomAnalysis, instruction: str, budget: str | None,
+    answers: list[dict[str, str]] | None = None, questions: list[Question] | None = None,
 ) -> tuple[str, list[FurnitureItem], bool, str | None]:
+    labels = {q.id: q.prompt for q in (questions or [])}
+    extra = "".join(
+        f"\n- {labels.get(a['question_id'], a['question_id'])} {a['answer']}"
+        for a in (answers or []) if a.get("question_id") != "budget"
+    )
     brief = (
         f"- The room is already furnished and the owner wants this change: {instruction}\n"
         "- If that is specific, implement it literally; if it is general, use the "
@@ -414,6 +420,7 @@ def build_modify_prompt(
         "- Keep the room recognisably the same room; leave alone whatever the "
         "instruction and the verdicts don't touch.\n"
         f"- Budget for new pieces: {budget or 'not specified'}"
+        f"{extra}"
     )
     return _plan(analysis, brief, lambda: _mock_modify_prompt(analysis, instruction))
 

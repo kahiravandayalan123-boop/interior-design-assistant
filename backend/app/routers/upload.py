@@ -20,11 +20,18 @@ settings = get_settings()
 @router.post("/upload", response_model=UploadResponse)
 def upload_room(
     request: Request,
-    style: str = Form(...),
+    style: str = Form(""),
     room_size: str = Form(""),
+    instruction: str = Form(""),
     image: UploadFile = File(...),
 ):
-    if style not in VALID_STYLES:
+    # "Modify Existing Room" sends the change the user wants instead of a
+    # target style; it then gets the same question step as a new design.
+    instruction = (instruction or "").strip()[:600]
+    modify = bool(instruction)
+    if modify:
+        style = "Custom"
+    elif style not in VALID_STYLES:
         raise HTTPException(422, f"Style must be one of: {', '.join(VALID_STYLES)}.")
 
     photo, fname = read_photo(image)
@@ -34,7 +41,7 @@ def upload_room(
 
     try:
         analysis, mock, _ = claude_service.analyze_room(
-            photo.data, photo.media_type, style, clean_room_size(room_size)
+            photo.data, photo.media_type, None if modify else style, clean_room_size(room_size)
         )
     except ServiceError as se:
         raise HTTPException(se.status_code, se.user_message)
@@ -43,6 +50,8 @@ def upload_room(
     session_id = new_session(
         {
             "style": style,
+            "mode": "modify" if modify else "new",
+            "instruction": instruction,
             "image_filename": fname,
             "image_size": photo.size,
             "image_url": image_url,

@@ -3,7 +3,7 @@ import Spinner from "./Spinner.jsx";
 
 // Preferences step: a fixed set of single-choice questions. One answer per
 // question; optional ones are marked and can be skipped.
-export default function QuestionForm({ questions, onSubmit, busy }) {
+export default function QuestionForm({ questions, onSubmit, busy, showExtra = true }) {
   const [values, setValues] = useState({});
   const [extra, setExtra] = useState(""); // optional free-text change request
 
@@ -53,7 +53,7 @@ export default function QuestionForm({ questions, onSubmit, busy }) {
         </div>
       ))}
 
-      <div className="q">
+      {showExtra && <div className="q">
         <p className="q-prompt">
           <span className="q-num">{questions.length + 1}</span>
           Anything specific you'd like changed?
@@ -68,7 +68,7 @@ export default function QuestionForm({ questions, onSubmit, busy }) {
           rows={2}
           maxLength={600}
         />
-      </div>
+      </div>}
 
       <div className="actions">
         <button className="primary" type="submit" disabled={busy || missing.length > 0}>

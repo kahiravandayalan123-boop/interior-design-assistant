@@ -45,6 +45,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Fraunces redraws its letters at small sizes; pin the large-size cut so every
+   heading matches the main title. */
+h1, h2, .landing-title, .loading-title { font-variation-settings: "opsz" 144; }
 img { max-width: 100%; }
 button { font-family: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -64,7 +67,7 @@ button { font-family: inherit; }
 .hero-sub { margin: 0 auto; max-width: 560px; color: var(--muted); font-size: 16px; line-height: 1.55; }
 .page-title { text-align: center; margin: 12px 0 28px; }
 .page-title h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 26px; letter-spacing: -0.02em; }
-.landing-heading { margin: 0 0 4px; font-family: var(--display); font-weight: 500; font-size: 24px; letter-spacing: -0.015em; text-align: center; }
+.landing-heading { margin: 0 0 4px; font-family: var(--display); font-weight: 600; font-size: 24px; letter-spacing: -0.015em; text-align: center; }
 .landing-sub { margin: 0 0 22px; color: var(--muted); text-align: center; }
 
 /* ---------- Stepper ---------- */
@@ -102,7 +105,7 @@ button { font-family: inherit; }
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 36px; margin-bottom: 24px; box-shadow: var(--shadow-md);
 }
-.card h2 { margin: 0 0 8px; font-family: var(--display); font-weight: 500; font-size: 28px; line-height: 1.15; letter-spacing: -0.02em; }
+.card h2 { margin: 0 0 8px; font-family: var(--display); font-weight: 600; font-size: 28px; line-height: 1.15; letter-spacing: -0.02em; }
 .card > .card-sub { margin: 0 0 26px; color: var(--muted); font-size: 15px; max-width: 640px; }
 .card h3, .h3-first {
   margin: 28px 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); font-weight: 700;
@@ -121,7 +124,7 @@ button { font-family: inherit; }
 .landing-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .landing-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); }
 .landing-card:nth-child(2) .landing-icon { background: var(--clay-soft); color: var(--clay); }
-.landing-title { font-family: var(--display); font-size: 23px; font-weight: 500; letter-spacing: -0.015em; }
+.landing-title { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
 .landing-desc { font-size: 14.5px; color: var(--muted); line-height: 1.55; }
 .landing-go { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--accent); }
 .how {

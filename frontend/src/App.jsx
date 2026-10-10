@@ -5,7 +5,6 @@ import {
   uploadRoom,
   sendAnswers,
   generateRedesign,
-  modifyRoom,
 } from "./api.js";
 import LandingScreen from "./components/LandingScreen.jsx";
 import UploadStep from "./components/UploadStep.jsx";
@@ -28,13 +27,6 @@ const GENERATE_STEPS = [
   { label: "Rendering the redesign onto your photo", at: 15 },
   { label: "Checking the architecture against your photo", at: 55 },
   { label: "Building your shopping list", at: 75 },
-];
-const MODIFY_STEPS = [
-  { label: "Assessing your room and furniture", at: 0 },
-  { label: "Planning your requested change", at: 20 },
-  { label: "Rendering the redesign onto your photo", at: 35 },
-  { label: "Checking the architecture against your photo", at: 75 },
-  { label: "Building your shopping list", at: 95 },
 ];
 
 // App states: landing -> upload -> questions -> result ("questions" only for
@@ -102,29 +94,13 @@ export default function App() {
     setStep("upload");
   }
 
-  async function handleModify(input) {
-    beginRequest("generating");
-    setSessionExpired(false);
-    try {
-      const data = await modifyRoom(input);
-      absorbWarnings(data);
-      setSession({ session_id: data.session_id, style: data.style, image_url: data.original_image_url });
-      setResult(data);
-      setStep("result");
-    } catch (e) {
-      handleFailure(e, "Something went wrong while creating your redesign.", () => handleModify(input));
-    } finally {
-      setStage(null);
-    }
-  }
-
   async function handleUpload(input) {
     beginRequest("analyzing");
     setSessionExpired(false);
     try {
       const data = await uploadRoom(input);
       absorbWarnings(data);
-      setSession(data);
+      setSession({ ...data, instruction: input.instruction || "" });
       setStep("questions");
     } catch (e) {
       handleFailure(e, "We couldn't analyze that photo. Please try again.", () => handleUpload(input));
@@ -297,13 +273,13 @@ export default function App() {
 
         {step === "upload" && mode === "modify" && (
           <>
-            {stage === "generating" && (
+            {stage === "analyzing" && (
               <div className="card">
-                <ProgressPanel title="Creating your redesign" sub={mockSub || "Usually 1–2 minutes — the render is checked against your photo before you see it."} steps={MODIFY_STEPS} />
+                <ProgressPanel title="Analyzing your room" sub={mockSub || "Usually 15–40 seconds."} steps={ANALYZE_STEPS} />
               </div>
             )}
-            <div hidden={stage === "generating"}>
-              <ModifyStep onSubmit={handleModify} onBack={backToLanding} busy={busy} />
+            <div hidden={stage === "analyzing"}>
+              <ModifyStep onSubmit={handleUpload} onBack={backToLanding} busy={busy} />
             </div>
           </>
         )}
@@ -320,9 +296,11 @@ export default function App() {
                 originalUrl={session.image_url}
                 style={session.style}
                 analysis={session.analysis}
+                instruction={mode === "modify" ? session.instruction : ""}
               />
               <QuestionForm
                 questions={session.questions}
+                showExtra={mode !== "modify"}
                 onSubmit={handleAnswers}
                 busy={busy}
               />

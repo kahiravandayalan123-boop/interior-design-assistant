@@ -68,10 +68,21 @@ def generate(req: GenerateRequest, request: Request):
             404, "Your photo is no longer on the server (it may have restarted). Please start over."
         )
 
+    modify = session.get("mode") == "modify"
+    instruction = session.get("instruction") or ""
+    budget = next((a["answer"] for a in answers if a["question_id"] == "budget"), None)
+    # The modify flow has no target style; "Modern" is only a scoring default.
+    match_style = "Modern" if modify else style
+
     try:
-        prompt, planned, _, _ = claude_service.build_image_prompt(analysis, style, prompt_answers, questions)
+        if modify:
+            prompt, planned, _, _ = claude_service.build_modify_prompt(
+                analysis, instruction, budget, prompt_answers, questions
+            )
+        else:
+            prompt, planned, _, _ = claude_service.build_image_prompt(analysis, style, prompt_answers, questions)
         image, check = render_checked(
-            prompt, style, analysis, source, "image/jpeg",
+            prompt, match_style, analysis, source, "image/jpeg",
             session.get("image_size") or (size_of(source) if source else None),
         )
     except ServiceError as se:
@@ -83,8 +94,7 @@ def generate(req: GenerateRequest, request: Request):
     fname = save_render(image)
     image_url = request.app.url_path_for("serve_generated", filename=fname)
 
-    budget = next((a["answer"] for a in answers if a["question_id"] == "budget"), None)
-    matches, note, total, recs, rec_note, rec_total = shopping(planned, prompt, style, budget, analysis)
+    matches, note, total, recs, rec_note, rec_total = shopping(planned, prompt, match_style, budget, analysis)
 
     answers_map = {a["question_id"]: a["answer"] for a in answers}
     recap = [
@@ -92,7 +102,9 @@ def generate(req: GenerateRequest, request: Request):
         for q in questions
         if q.id in answers_map
     ]
-    if extra_request:
+    if modify:
+        recap.insert(0, RecapItem(id="instruction", kind="instruction", question="Requested change", answer=instruction))
+    elif extra_request:
         recap.append(RecapItem(id="instruction", kind="instruction", question="Requested change", answer=extra_request))
 
     mock = image.mock or not (settings.anthropic_ready and settings.openai_ready)

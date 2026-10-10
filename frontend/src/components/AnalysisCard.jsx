@@ -3,7 +3,7 @@ import VerdictList, { VerdictSummary } from "./Verdicts.jsx";
 
 const SIZE_LABEL = { small: "Small room", medium: "Medium room", large: "Large room" };
 
-export default function AnalysisCard({ originalUrl, style, analysis }) {
+export default function AnalysisCard({ originalUrl, style, analysis, instruction }) {
   const s = analysis.structure || {};
   const fixed = [
     ...(s.windows || []).map((w) => ["Window", w]),
@@ -28,7 +28,11 @@ export default function AnalysisCard({ originalUrl, style, analysis }) {
               {analysis.size_estimate}
               {analysis.size_from_user ? " · as you told us" : " · estimated from the photo"}
             </span>
-            <span className="fact"><strong>Target style</strong>{style}</span>
+            {instruction ? (
+              <span className="fact"><strong>Your requested change</strong>{instruction}</span>
+            ) : (
+              <span className="fact"><strong>Target style</strong>{style}</span>
+            )}
           </div>
           {fixed.length > 0 && (
             <>

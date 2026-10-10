@@ -4,21 +4,18 @@ import Alert from "./Alert.jsx";
 import SampleRooms from "./SampleRooms.jsx";
 import RoomSizePicker from "./RoomSizePicker.jsx";
 
-const BUDGETS = ["₹10,000", "₹20,000", "₹30,000"];
-
 // One-click example instructions for the demo — one general, one specific.
 const EXAMPLE_INSTRUCTIONS = [
   "Make it feel warmer and cosier — softer lighting, more plants and textured textiles",
   "Replace the sofa with a deep green velvet one and add a reading lamp beside it",
 ];
 
-// "Modify Existing Room" flow: one form — photo, free-text instruction,
-// budget — then straight to the redesign (no separate Q&A step).
+// "Modify Existing Room" flow: photo + free-text instruction, then the same
+// preference questions as a new design (budget, seating, priorities, ...).
 export default function ModifyStep({ onSubmit, onBack, busy }) {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [instruction, setInstruction] = useState("");
-  const [budget, setBudget] = useState("");
   const [error, setError] = useState("");
   const [roomSize, setRoomSize] = useState("");
   const [dragActive, setDragActive] = useState(false);
@@ -70,8 +67,7 @@ export default function ModifyStep({ onSubmit, onBack, busy }) {
     setError("");
     if (!file) return setError("Choose a room photo first.");
     if (!instruction.trim()) return setError("Describe the change you'd like — general or specific.");
-    if (!budget) return setError("Pick a budget for this refresh.");
-    onSubmit({ file, instruction: instruction.trim(), budget, roomSize });
+    onSubmit({ file, instruction: instruction.trim(), roomSize });
   }
 
   return (
@@ -153,28 +149,12 @@ export default function ModifyStep({ onSubmit, onBack, busy }) {
         ))}
       </div>
 
-      <h3>Budget for this refresh</h3>
-      <div className="opts">
-        {BUDGETS.map((b) => (
-          <button
-            key={b}
-            type="button"
-            className="chip"
-            aria-pressed={budget === b}
-            disabled={busy}
-            onClick={() => setBudget((cur) => (cur === b ? "" : b))}
-          >
-            {b}
-          </button>
-        ))}
-      </div>
-
       {error && <Alert tone="notice" onDismiss={() => setError("")}>{error}</Alert>}
 
       <div className="actions">
         <button className="primary" type="submit" disabled={busy}>
           {busy && <Spinner />}
-          {busy ? "Working…" : "Generate redesign"}
+          {busy ? "Analyzing room…" : "Analyze room"}
         </button>
         <button className="ghost" type="button" onClick={onBack} disabled={busy}>
           Back

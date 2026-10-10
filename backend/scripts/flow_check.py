@@ -123,8 +123,16 @@ def main():
 
     # ---- Modify Existing Room --------------------------------------------
     if "--no-modify" not in sys.argv:
-        r = timed("modify", lambda: c.post("/api/modify", files=files(), data={
-            "instruction": "Make it feel warmer and cosier with softer lighting", "budget": "₹20,000", "room_size": ROOM_SIZE}))
+        r = timed("modify upload", lambda: c.post("/api/upload", files=files(), data={
+            "instruction": "Make it feel warmer and cosier with softer lighting", "room_size": ROOM_SIZE}))
+        check("modify upload ok", r.status_code == 200)
+        mu = r.json()
+        mids = [q["id"] for q in mu["questions"]]
+        check("modify flow gets the same structured questions", mids[:2] == ["budget", "seating"] and "colors" in mids, str(mids))
+        manswers = [{"question_id": q["id"], "answer": "₹20,000" if q["id"] == "budget" else q["options"][0]}
+                    for q in mu["questions"] if not q["optional"]]
+        c.post("/api/chat", json={"session_id": mu["session_id"], "answers": manswers})
+        r = timed("modify generate", lambda: c.post("/api/generate", json={"session_id": mu["session_id"]}))
         check("modify ok", r.status_code == 200)
         if r.status_code == 200:
             m, more = show_result("modify", r)
