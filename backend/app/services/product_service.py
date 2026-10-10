@@ -128,7 +128,7 @@ def _candidates(cat: str) -> list[dict]:
 
 
 def _tokens(text: str) -> set[str]:
-    text = (text or "").lower().replace("two", "2").replace("three", "3")
+    text = (text or "").lower().replace("two", "2").replace("three", "3").replace("shelves", "shelf")
     words = text.replace("-", " ").replace(",", " ").split()
     return {w.rstrip("s") for w in words if len(w) > 3 or w.isdigit()}
 
@@ -147,7 +147,7 @@ def _relevance_score(product: dict, item: FurnitureItem, style: str) -> float:
     # Prefer the product that is actually the thing asked for ("floating
     # shelves" -> a floating shelf, not a floor-standing bookcase).
     wanted, have = _tokens(item.name), _tokens(product["title"])
-    score += 0.8 * len(wanted & have)
+    score += 1.5 * len(wanted & have)
     item_color = (item.color or "").lower()
     if item_color and any(item_color in c or c in item_color for c in product.get("colors", [])):
         score += 1.0
