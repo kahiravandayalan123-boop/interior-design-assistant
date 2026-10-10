@@ -46,8 +46,8 @@ body {
 }
 
 /* Fraunces redraws its letters at small sizes; pin the large-size cut so every
-   heading matches the main title. */
-h1, h2, .landing-title, .loading-title { font-variation-settings: "opsz" 144; }
+   heading uses the same letterforms as the main title. */
+h2, .page-title h1, .landing-title, .loading-title { font-variation-settings: "opsz" 48; letter-spacing: -0.01em; }
 img { max-width: 100%; }
 button { font-family: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -124,7 +124,7 @@ button { font-family: inherit; }
 .landing-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .landing-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); }
 .landing-card:nth-child(2) .landing-icon { background: var(--clay-soft); color: var(--clay); }
-.landing-title { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.landing-title { font-family: var(--display); font-size: 24px; font-weight: 600; }
 .landing-desc { font-size: 14.5px; color: var(--muted); line-height: 1.55; }
 .landing-go { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--accent); }
 .how {
