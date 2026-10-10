@@ -65,8 +65,8 @@ export default function UploadStep({ onSubmit, busy }) {
 
   return (
     <form className="card" onSubmit={submit}>
-      <p className="eyebrow">Redesign in a new style</p>
-      <h2>Start with a photo of your room</h2>
+      <p className="eyebrow">New Room Design</p>
+      <h2>Upload a room photo</h2>
       <p className="card-sub">We'll assess the furniture you already have, the layout and the light — then tell you what to keep and what to change.</p>
 
       <span className="field" id="room-label">Room photo</span>
@@ -119,7 +119,7 @@ export default function UploadStep({ onSubmit, busy }) {
       <h3>Room size</h3>
       <RoomSizePicker value={roomSize} onChange={setRoomSize} disabled={busy} />
 
-      <h3>Style you want</h3>
+      <h3>Target style</h3>
       <StylePicker value={style} onChange={setStyle} disabled={busy} />
 
       {error && <Alert tone="notice" onDismiss={() => setError("")}>{error}</Alert>}

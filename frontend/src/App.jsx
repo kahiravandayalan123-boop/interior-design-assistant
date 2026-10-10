@@ -205,33 +205,23 @@ export default function App() {
 
   return (
     <div className="wrap">
-      <nav className="topbar">
-        <button type="button" className="brand" onClick={restart} disabled={busy}>
-          <span className="brand-mark" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round">
-              <path d="M7 20v-4a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v4M5 20h22v4H5z" />
-            </svg>
-          </span>
-          Roomwise
-        </button>
-        <span className={`status status-${server}`}>
-          <i aria-hidden="true" />
-          {server === "ok" ? "AI services online" : server === "down" ? "Server unreachable" : "Connecting…"}
-        </span>
-      </nav>
-
       {step === "landing" ? (
         <header className="hero">
-          <p className="eyebrow">AI interior design assistant</p>
-          <h1>See your own room, <em>redesigned</em>.</h1>
-          <p>
+          <h1>AI Interior Design Assistant</h1>
+          <p className="hero-tagline">See your own room, redesigned.</p>
+          <p className="hero-sub">
             Upload a photo. Get an honest verdict on the furniture you already
             have, a redesign painted onto your actual room, and a shopping list
             sized to your space and budget.
           </p>
         </header>
       ) : (
-        <Stepper current={currentStep} />
+        <>
+          <header className="page-title">
+            <h1>AI Interior Design Assistant</h1>
+          </header>
+          <Stepper current={currentStep} />
+        </>
       )}
 
       {server === "down" && (

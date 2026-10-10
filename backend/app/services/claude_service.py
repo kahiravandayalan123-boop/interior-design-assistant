@@ -210,65 +210,108 @@ def _apply_user_size(analysis: RoomAnalysis, room_size: str) -> RoomAnalysis:
 def _budget_question() -> Question:
     return Question(
         id="budget",
-        prompt="What's your budget for new pieces?",
+        prompt="What's your budget for this refresh?",
         kind="budget",
         options=list(VALID_BUDGETS),
-        hint="Covers only what you'd buy — pieces you keep cost nothing.",
     )
+
+
+_SEATING_CATS = {"sofa", "couch", "sectional", "loveseat", "settee", "armchair", "bench"}
+
+
+def _adaptive_questions(analysis: RoomAnalysis, style: str) -> list[Question]:
+    """The original structured question set: budget, seating, space or
+    priorities, lighting or storage (when the room calls for it), colours.
+    Every question is single-select; wording adapts to what was detected."""
+    text = " ".join(
+        [analysis.summary, analysis.layout_notes, analysis.lighting]
+        + [f"{f.name} {f.description}" for f in analysis.existing_furniture]
+    ).lower()
+
+    seating = [f for f in analysis.existing_furniture if f.category.lower() in _SEATING_CATS]
+    small = any(k in text for k in ("small", "tight", "narrow", "cramped", "compact", "reads small", "limited space"))
+    dark = any(k in text for k in ("dark", "dim", "limited natural", "north-facing", "low light", "little light", "no window"))
+    cluttered = any(k in text for k in ("clutter", "crowded", "overcrowd", "messy", "no storage", "not much storage", "lacks storage"))
+    colors = [c for c in analysis.detected_colors if c][:3]
+
+    pool: list[Question] = []
+
+    if seating:
+        name = seating[0].name.lower()
+        pool.append(Question(
+            id="seating", kind="seating",
+            prompt=f"You've got a {name} in there now — what should happen with the seating?",
+            options=["Keep it and restyle around it", "Replace it with something new",
+                     "Add another seat or two", "Not sure — you decide"],
+        ))
+    else:
+        pool.append(Question(
+            id="seating", kind="seating",
+            prompt="There's no clear seating in the photo — what do you want?",
+            options=["A sofa", "Sofa + an armchair", "A sectional", "Just a pair of chairs"],
+        ))
+
+    if small:
+        pool.append(Question(
+            id="space", kind="space",
+            prompt="The room reads a little tight — what's the priority?",
+            options=["Maximise open floor space", "Work in more storage",
+                     "Still fit more seating", "Keep it airy and pared-back"],
+        ))
+    else:
+        pool.append(Question(
+            id="priorities", kind="priorities",
+            prompt="What matters most for the redesign?",
+            options=["More open space", "More storage", "More seating",
+                     "Better lighting", "More display / decor"],
+        ))
+
+    if dark:
+        pool.append(Question(
+            id="lighting", kind="lighting",
+            prompt="Lighting looks limited in here — how should we handle it?",
+            options=["Layered lighting (lamps + overhead)", "Lighter colours to bounce light",
+                     "One statement fixture", "Keep it warm and moody"],
+        ))
+    elif cluttered:
+        pool.append(Question(
+            id="storage", kind="storage",
+            prompt="How much storage do you need?",
+            options=["A lot — hide the clutter", "Some closed storage",
+                     "Mostly open shelving", "Minimal — keep it sparse"],
+        ))
+
+    if colors:
+        pool.append(Question(
+            id="colors", kind="colors", optional=True,
+            prompt=f"Your room's mostly {', '.join(colors)} right now — where do you want to take the palette?",
+            options=["Keep a similar palette", "Warmer and cosier", "Cooler and calmer",
+                     "Bolder, with strong accents", "Neutral and timeless"],
+        ))
+    else:
+        pool.append(Question(
+            id="colors", kind="colors", optional=True,
+            prompt="Any colours you want to lean into or avoid?",
+            options=["Warm neutrals", "Cool greys", "Earthy greens",
+                     "Bold accents", "No preference"],
+        ))
+
+    # budget first, then every contextual question, de-duped by id.
+    picked: list[Question] = [_budget_question()]
+    seen = {"budget"}
+    for q in pool:
+        if q.id not in seen:
+            picked.append(q)
+            seen.add(q.id)
+    return picked
 
 
 def generate_questions(
     analysis: RoomAnalysis, style: str
 ) -> tuple[list[Question], bool, str | None]:
-    """Four single-choice questions, always the same ones in the same order.
-    Each has mutually exclusive options; only the hints change per room."""
-    items = analysis.existing_furniture
-    keep = sum(1 for f in items if f.action == "keep")
-    change = sum(1 for f in items if f.action in ("replace", "remove"))
-
-    if items:
-        second = Question(
-            id="scope", kind="scope",
-            prompt="How much of the room should change?",
-            options=["Light refresh", "Balanced update", "Full makeover"],
-            hint=(
-                f"Our read of your room: keep {keep} piece{'s' if keep != 1 else ''}, "
-                f"change {change}. Balanced follows that advice."
-            ),
-        )
-    else:
-        second = Question(
-            id="scope", kind="scope",
-            prompt="How furnished should the room be?",
-            options=["Essentials only", "Comfortably furnished", "Fully styled"],
-            hint="The room looks empty, so everything here would be new.",
-        )
-
-    text = f"{analysis.layout_notes} {analysis.lighting}".lower()
-    if analysis.size_class == "small":
-        priority_hint = "This is a small room, so open floor space usually matters most."
-    elif any(k in text for k in ("dim", "dark", "low light", "little natural")):
-        priority_hint = "The room reads a little dark, so lighting is worth prioritising."
-    else:
-        priority_hint = "Pick the one thing the redesign should get right."
-
-    colours = ", ".join(c for c in analysis.detected_colors[:3] if c)
-    return [
-        _budget_question(),
-        second,
-        Question(
-            id="priority", kind="priorities",
-            prompt="What matters most?",
-            options=["Open floor space", "Storage", "Seating", "Lighting", "A cosier feel"],
-            hint=priority_hint,
-        ),
-        Question(
-            id="palette", kind="colors", optional=True,
-            prompt="Which colour direction?",
-            options=["Keep current colours", "Light and neutral", "Warm and earthy", "Cool and calm", "Bold accents"],
-            hint=f"Right now the room is mostly {colours}." if colours else "",
-        ),
-    ], not settings.anthropic_ready, None
+    """Built in code (not written by the model), so the same room always gets
+    the same clean questions."""
+    return _adaptive_questions(analysis, style), not settings.anthropic_ready, None
 
 
 # ===========================================================================

@@ -100,12 +100,12 @@ def main():
           all(f["action"] in ("keep", "replace", "remove") and f["reason"] for f in a["existing_furniture"]))
     ids = [q["id"] for q in u["questions"]]
     print("  questions:", [(q["prompt"], q["options"]) for q in u["questions"]])
-    check("questions are the fixed clean set", ids == ["budget", "scope", "priority", "palette"], str(ids))
-    opts = [o for q in u["questions"] for o in q["options"]]
-    check("no duplicate options, none multi-select", len(opts) == len(set(opts)) and not any(q["multi"] for q in u["questions"]))
+    check("original question set (budget, seating, ...)", ids[:2] == ["budget", "seating"] and "colors" in ids, str(ids))
+    check("all single-select, no duplicate options within a question",
+          not any(q["multi"] for q in u["questions"]) and all(len(q["options"]) == len(set(q["options"])) for q in u["questions"]))
 
-    answers = [{"question_id": "budget", "answer": "₹30,000"}, {"question_id": "scope", "answer": u["questions"][1]["options"][1]},
-               {"question_id": "priority", "answer": "Open floor space"}]
+    answers = [{"question_id": q["id"], "answer": "₹30,000" if q["id"] == "budget" else q["options"][0]}
+               for q in u["questions"] if not q["optional"]]
     r = timed("chat", lambda: c.post("/api/chat", json={"session_id": u["session_id"], "answers": answers, "message": ""}))
     check("answers accepted", r.status_code == 200 and r.json()["ready_to_generate"])
     r = timed("generate", lambda: c.post("/api/generate", json={"session_id": u["session_id"]}))

@@ -76,8 +76,8 @@ export default function ModifyStep({ onSubmit, onBack, busy }) {
 
   return (
     <form className="card" onSubmit={submit}>
-      <p className="eyebrow">Make a specific change</p>
-      <h2>Show us the room, tell us the change</h2>
+      <p className="eyebrow">Modify Existing Room</p>
+      <h2>Modify your room</h2>
       <p className="card-sub">
         Upload a photo of your furnished room and tell us what to change —
         as general as “make it more appealing” or as specific as “move the

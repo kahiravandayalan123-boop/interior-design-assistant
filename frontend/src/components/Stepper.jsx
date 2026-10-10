@@ -1,7 +1,7 @@
 // Horizontal "Step X of N" progress indicator across the top of the flow.
 // "Preferences" only applies to the New Room Design path — the Modify
 // Existing Room path skips straight from Upload to Generate.
-export const STEPS = ["Start", "Your room", "Preferences", "Generate", "Results"];
+export const STEPS = ["Start", "Upload", "Preferences", "Generate", "Results"];
 
 export default function Stepper({ current }) {
   return (

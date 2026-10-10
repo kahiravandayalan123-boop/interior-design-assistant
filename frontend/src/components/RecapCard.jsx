@@ -22,13 +22,12 @@ export default function RecapCard({ style, recap }) {
 function recapLabel(r) {
   const known = {
     budget: "Budget",
-    scope: "Amount of change",
     seating: "Seating",
     space: "Space priority",
     storage: "Storage",
     lighting: "Lighting",
-    colors: "Colour direction",
-    priorities: "Top priority",
+    colors: "Colours",
+    priorities: "Priorities",
     instruction: "Requested change",
   };
   return known[r.kind] || r.question;

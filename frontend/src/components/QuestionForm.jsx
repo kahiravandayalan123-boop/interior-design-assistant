@@ -25,8 +25,8 @@ export default function QuestionForm({ questions, onSubmit, busy }) {
   return (
     <form className="card" onSubmit={submit}>
       <p className="eyebrow">Step 2 · Preferences</p>
-      <h2>Tell us what you want</h2>
-      <p className="card-sub">Pick one option per question.</p>
+      <h2>A few quick questions</h2>
+      <p className="card-sub">This helps tailor the redesign to your budget and taste. Pick one option per question.</p>
 
       {questions.map((q, i) => (
         <div className="q" key={q.id} role="group" aria-label={q.prompt}>
@@ -56,7 +56,7 @@ export default function QuestionForm({ questions, onSubmit, busy }) {
       <div className="q">
         <p className="q-prompt">
           <span className="q-num">{questions.length + 1}</span>
-          Anything specific?
+          Anything specific you'd like changed?
           <span className="q-optional">Optional</span>
         </p>
         <textarea
