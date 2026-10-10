@@ -20,6 +20,9 @@ restarted, the real path runs with no code change. Transient failures
 retry; permanent ones (bad key, no credit, content policy) fall back to the
 placeholder plus a warning so the flow still completes.
 
+Update: with a key configured, failures now always raise (see generate_image);
+the placeholder is only for running with no key at all.
+
 Note: `dall-e-3`/`dall-e-2` were retired from the OpenAI API; this targets the
 current `gpt-image-1` model family (also covers `gpt-image-1-mini`,
 `gpt-image-1.5`, `gpt-image-2`, ...), which has a different parameter set
@@ -40,7 +43,7 @@ from .errors import ServiceError, classify_provider_error
 settings = get_settings()
 _client = None
 
-_MAX_PROMPT_CHARS = 3800
+_MAX_PROMPT_CHARS = 6000
 _VALID_SIZES = {"1024x1024", "1536x1024", "1024x1536", "auto"}
 
 # Wall / floor / accent RGB per style, used by the placeholder renderer.
@@ -94,15 +97,39 @@ def build_dalle_prompt(raw: str, style: str, room_type: str = "room") -> str:
     return framed[:_MAX_PROMPT_CHARS]
 
 
-# Prepended when editing the user's own photo: the model-written prompt
-# describes the new furnishings, this pins down what must NOT change.
+# Prepended when editing the user's own photo: the plan describes the new
+# furnishings, this pins down what must NOT change.
 _EDIT_PREFIX = (
-    "Redesign the room in this exact photo. Keep the same camera angle, framing "
-    "and perspective, and keep the architecture unchanged: walls, ceiling, "
-    "windows, doors, any stairs, floor plan and room proportions must stay "
-    "exactly where they are. Change only the furniture, decor, textiles, lighting fixtures, "
-    "colours and finishes as described: "
+    "Edit this exact photo of a real room. This is a furniture and decor "
+    "restyle only, NOT a renovation. Keep the same camera angle, framing and "
+    "perspective. The architecture is locked: every wall, the ceiling, the "
+    "floor area, and every window, door and opening must stay exactly where "
+    "it is, the same size and shape. Do not add, remove, move, cover over or "
+    "invent any window, door, staircase, hallway, alcove or adjoining room, "
+    "and do not extend the room beyond what the photo shows. "
 )
+
+
+def _structure_lock(structure) -> str:
+    """Spell out the photo's architecture so the model has a checklist."""
+    if structure is None:
+        return ""
+    parts = []
+    parts.append(
+        "Windows that must remain (" + str(len(structure.windows)) + "): " + "; ".join(structure.windows) + "."
+        if structure.windows else "There are no windows in view: do not add any."
+    )
+    parts.append(
+        "Doors/openings that must remain (" + str(len(structure.doors)) + "): " + "; ".join(structure.doors) + "."
+        if structure.doors else "There are no doors in view: do not add any."
+    )
+    parts.append(
+        f"Stairs that must remain: {structure.stairs}." if structure.stairs
+        else "There is no staircase: do not add one."
+    )
+    if structure.other_fixed:
+        parts.append("Also fixed: " + "; ".join(structure.other_fixed) + ".")
+    return " ".join(parts) + " "
 
 
 def generate_image(
@@ -111,26 +138,36 @@ def generate_image(
     room_type: str = "room",
     source_image: bytes | None = None,
     source_media_type: str = "image/jpeg",
+    structure=None,
+    size: str | None = None,
+    fix_issues: list[str] | None = None,
 ) -> ImageResult:
     """Render the redesign. Pass the user's photo as `source_image` so the
-    output is an edit of their actual room rather than a new invented one."""
+    output is an edit of their actual room rather than a new invented one;
+    `structure` is the architecture to lock and `size` the photo's own
+    `WxH`, so the render is the same frame as the original. `fix_issues`
+    lists what a previous attempt got wrong.
+
+    With a key configured this never substitutes a placeholder: any failure
+    raises a ServiceError so the user sees why and can retry."""
     if not settings.openai_ready:
         return ImageResult(_placeholder_png(style), "image/png", mock=True)
 
     try:
         if source_image:
-            framed = build_dalle_prompt(_EDIT_PREFIX + (prompt or ""), style, room_type)
-            return _edit_real(framed, source_image, source_media_type)
+            fix = ""
+            if fix_issues:
+                fix = (
+                    "A previous attempt broke these rules; do not repeat it: "
+                    + " ".join(fix_issues) + " "
+                )
+            text = _EDIT_PREFIX + _structure_lock(structure) + fix + "Change only this: " + (prompt or "")
+            return _edit_real(build_dalle_prompt(text, style, room_type), source_image, source_media_type, size)
         return _generate_real(build_dalle_prompt(prompt, style, room_type))
     except ServiceError:
         raise
     except Exception as exc:  # noqa: BLE001 - classified below
-        se = classify_provider_error(exc, provider="openai")
-        if se.degrade:
-            return ImageResult(
-                _placeholder_png(style), "image/png", mock=True, warning=se.user_message
-            )
-        raise se
+        raise classify_provider_error(exc, provider="openai") from exc
 
 
 def _generate_real(framed_prompt: str) -> ImageResult:
@@ -149,15 +186,17 @@ def _generate_real(framed_prompt: str) -> ImageResult:
     return _extract_image(_get_client().images.generate(**kwargs))
 
 
-def _edit_real(framed_prompt: str, source: bytes, media_type: str) -> ImageResult:
+def _edit_real(framed_prompt: str, source: bytes, media_type: str, size: str | None = None) -> ImageResult:
     ext = {"image/png": "png", "image/webp": "webp"}.get(media_type, "jpg")
     kwargs = dict(
         model=settings.openai_image_model,
         image=(f"room.{ext}", source, media_type),
         prompt=framed_prompt,
-        # "auto" lets the API match the photo's aspect ratio (landscape rooms
-        # stay landscape) instead of squashing everything to a square.
-        size=settings.openai_edit_size if settings.openai_edit_size in _VALID_SIZES else "auto",
+        # The photo was already cropped to a supported canvas (image_prep), so
+        # asking for that exact size means the model has nothing to invent.
+        size=size if size in _VALID_SIZES else (
+            settings.openai_edit_size if settings.openai_edit_size in _VALID_SIZES else "auto"
+        ),
         n=1,
     )
     if settings.openai_image_model.startswith("gpt-image"):

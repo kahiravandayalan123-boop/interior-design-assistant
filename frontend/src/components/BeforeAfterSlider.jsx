@@ -12,6 +12,12 @@ export default function BeforeAfterSlider({
   const ref = useRef(null);
   const dragging = useRef(false);
   const [pos, setPos] = useState(50); // percent revealed of the "before" image
+  // Match the frame to the image's real shape so nothing is cropped away.
+  const [ratio, setRatio] = useState("3 / 2");
+  const onLoad = (e) => {
+    const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+    if (w && h) setRatio(`${w} / ${h}`);
+  };
 
   const setFromClientX = useCallback((clientX) => {
     const el = ref.current;
@@ -45,8 +51,8 @@ export default function BeforeAfterSlider({
   // No original to compare against — just show the redesign.
   if (!before) {
     return (
-      <div className="ba">
-        <img className="ba-img" src={after} alt={afterLabel} draggable="false" onError={onImgError} />
+      <div className="ba" style={{ aspectRatio: ratio }}>
+        <img className="ba-img" src={after} alt={afterLabel} draggable="false" onLoad={onLoad} onError={onImgError} />
       </div>
     );
   }
@@ -54,13 +60,14 @@ export default function BeforeAfterSlider({
   return (
     <div
       className="ba"
+      style={{ aspectRatio: ratio }}
       ref={ref}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={stop}
       onPointerCancel={stop}
     >
-      <img className="ba-img" src={after} alt={afterLabel} draggable="false" onError={onImgError} />
+      <img className="ba-img" src={after} alt={afterLabel} draggable="false" onLoad={onLoad} onError={onImgError} />
       <img
         className="ba-img ba-before"
         src={before}

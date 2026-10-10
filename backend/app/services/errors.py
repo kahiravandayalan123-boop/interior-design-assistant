@@ -74,7 +74,7 @@ def classify_provider_error(exc: Exception, *, provider: str) -> ServiceError:
     # ---- permanent: fall back to a sample and warn -------------------------
     if name == "AuthenticationError" or status == 401:
         return ServiceError(
-            f"{label.capitalize()} rejected the API key — check {env_var} in backend/.env.",
+            f"{label.capitalize()} rejected the API key — the server's {env_var} needs to be checked.",
             degrade=True, kind="auth",
         )
     if name == "PermissionDeniedError" or status == 403:
@@ -96,7 +96,7 @@ def classify_provider_error(exc: Exception, *, provider: str) -> ServiceError:
         )
     if name == "NotFoundError" or status == 404:
         return ServiceError(
-            f"The model configured for {label} wasn't found — check the model name in backend/.env.",
+            f"The model configured for {label} wasn't found — the server's model setting needs to be checked.",
             degrade=True, kind="model",
         )
     if name in ("BadRequestError", "UnprocessableEntityError") or status in (400, 422):
@@ -118,7 +118,7 @@ def classify_provider_error(exc: Exception, *, provider: str) -> ServiceError:
         )
     if name == "APIConnectionError" or "connection error" in msg.lower():
         return ServiceError(
-            f"Couldn't reach {label}. Check your internet connection and try again.",
+            f"The server couldn't reach {label}. Please try again in a moment.",
             status_code=503, retryable=True, kind="network",
         )
     if isinstance(status, int) and status >= 500:
@@ -161,3 +161,30 @@ def run_or_degrade(
         if se.degrade or (degrade_transient and se.retryable):
             return mock_fn(), se.user_message
         raise se
+
+
+def run_real(real_fn: Callable[[], T], *, provider: str, what: str) -> T:
+    """Run a real provider call with no mock fallback.
+
+    Used whenever API keys are configured: a failed step must surface as a
+    clear error the user can retry, never be papered over with sample data
+    (a sample analysis followed by a real render is how "before" and "after"
+    end up describing different rooms). An unreadable answer is retried once,
+    since that is usually a one-off.
+    """
+    last: Exception | None = None
+    for _attempt in range(2):
+        try:
+            return real_fn()
+        except ServiceError:
+            raise
+        except (json.JSONDecodeError, ValidationError, KeyError, TypeError, ValueError) as exc:
+            last = exc
+            continue
+        except Exception as exc:  # noqa: BLE001 - deliberately broad; classified below
+            raise classify_provider_error(exc, provider=provider) from exc
+    raise ServiceError(
+        f"{_LABEL.get(provider, 'An external service').capitalize()} gave an answer we "
+        f"couldn't read while {what}. Please try again.",
+        status_code=502, retryable=True, kind="parse",
+    ) from last

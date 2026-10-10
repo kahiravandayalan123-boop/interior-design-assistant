@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Spinner from "./Spinner.jsx";
 import Alert from "./Alert.jsx";
 import SampleRooms from "./SampleRooms.jsx";
+import RoomSizePicker from "./RoomSizePicker.jsx";
 
 const BUDGETS = ["₹10,000", "₹20,000", "₹30,000"];
 
@@ -19,6 +20,7 @@ export default function ModifyStep({ onSubmit, onBack, busy }) {
   const [instruction, setInstruction] = useState("");
   const [budget, setBudget] = useState("");
   const [error, setError] = useState("");
+  const [roomSize, setRoomSize] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef(null);
 
@@ -69,12 +71,13 @@ export default function ModifyStep({ onSubmit, onBack, busy }) {
     if (!file) return setError("Choose a room photo first.");
     if (!instruction.trim()) return setError("Describe the change you'd like — general or specific.");
     if (!budget) return setError("Pick a budget for this refresh.");
-    onSubmit({ file, instruction: instruction.trim(), budget });
+    onSubmit({ file, instruction: instruction.trim(), budget, roomSize });
   }
 
   return (
     <form className="card" onSubmit={submit}>
-      <h2>Modify your room</h2>
+      <p className="eyebrow">Make a specific change</p>
+      <h2>Show us the room, tell us the change</h2>
       <p className="card-sub">
         Upload a photo of your furnished room and tell us what to change —
         as general as “make it more appealing” or as specific as “move the
@@ -127,6 +130,9 @@ export default function ModifyStep({ onSubmit, onBack, busy }) {
         )}
       </div>
       <SampleRooms onPick={acceptFile} disabled={busy} />
+
+      <h3>Room size</h3>
+      <RoomSizePicker value={roomSize} onChange={setRoomSize} disabled={busy} />
 
       <h3>What should change?</h3>
       <textarea

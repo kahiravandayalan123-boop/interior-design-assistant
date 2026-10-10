@@ -1,5 +1,6 @@
 import { mediaUrl } from "../api.js";
 import { onImgError } from "../placeholder.js";
+import { ShopLinks } from "./ProductList.jsx";
 
 export default function RecommendationList({ recommendations }) {
   if (!recommendations?.length) return null;
@@ -7,15 +8,15 @@ export default function RecommendationList({ recommendations }) {
     <ul className="products">
       {recommendations.map((r) => (
         <li className="product" key={r.product_id}>
-          <img src={mediaUrl(r.image)} alt={r.name} loading="lazy" onError={onImgError} />
+          <img src={mediaUrl(r.image)} alt="" onError={onImgError} />
           <div>
-            <div><strong>{r.name}</strong></div>
-            <div className="meta">{r.description}</div>
-            <a href={r.url} target="_blank" rel="noreferrer">View product →</a>
+            <div className="product-title"><strong>{r.name}</strong></div>
+            <div className="meta">{r.category}</div>
+            <ShopLinks links={r.shop_links} />
           </div>
           <div className="price">
-            {r.currency === "INR" ? "₹" : r.currency === "USD" ? "$" : ""}
-            {r.price.toLocaleString("en-IN")}
+            ₹{Math.round(r.price).toLocaleString("en-IN")}
+            <span>estimate</span>
           </div>
         </li>
       ))}

@@ -15,6 +15,7 @@ from functools import lru_cache
 
 from ..config import get_settings
 from ..schemas import BUDGET_TIGHT_MESSAGE, FurnitureItem, ProductMatch, parse_budget_amount
+from .shop_links import shop_links
 
 settings = get_settings()
 logger = logging.getLogger("interior_design_assistant.products")
@@ -143,7 +144,22 @@ def _relevance_score(product: dict, item: FurnitureItem, style: str) -> float:
     return round(score, 3)
 
 
-def _best_pick(item: FurnitureItem, cat: str, candidates: list[dict], style: str, seen: set[str]) -> tuple[dict, float] | None:
+# Title words that mean "too big for a small room" / "made for one".
+_OVERSIZED = ("3-seat", "three-seat", "sectional", "chesterfield", "6-seater", "extending", "extendable", "8x10", "modular")
+_COMPACT = ("2-seat", "two-seat", "loveseat", "compact", "nesting", "round", "ladder", "floating", "slim", "runner")
+
+
+def _is_oversized(title: str) -> bool:
+    return any(w in title.lower() for w in _OVERSIZED)
+
+
+def _best_pick(item: FurnitureItem, cat: str, candidates: list[dict], style: str, seen: set[str], small_room: bool = False) -> tuple[dict, float] | None:
+    if small_room:
+        # Never suggest a piece that is plainly too big for a small room.
+        fitting = [p for p in candidates if not _is_oversized(p["title"])]
+        if not fitting:
+            return None
+        candidates = sorted(fitting, key=lambda p: not any(w in p["title"].lower() for w in _COMPACT))
     # Ties on relevance go to the cheaper product, leaving more budget headroom.
     ranked = sorted(candidates, key=lambda p: (-_relevance_score(p, item, style), float(p["price"])))
     pick = next((p for p in ranked if p["product_id"] not in seen), None)
@@ -153,6 +169,8 @@ def _best_pick(item: FurnitureItem, cat: str, candidates: list[dict], style: str
 
 
 def _to_match(item: FurnitureItem, cat: str, product: dict, score: float) -> ProductMatch:
+    # Search for what the design calls for, not the demo catalogue's invented name.
+    links = shop_links(item.name or product["title"], item.color, cat)
     return ProductMatch(
         item=item.name or product["title"],
         category=cat,
@@ -162,7 +180,9 @@ def _to_match(item: FurnitureItem, cat: str, product: dict, score: float) -> Pro
         price=float(product["price"]),
         currency=product.get("currency", "INR"),
         retailer=product["retailer"],
-        url=product["url"],
+        url=links[0].url,
+        action=item.action,
+        shop_links=links,
         image=product["image"],
         style_tags=product.get("style_tags", []),
         match_score=score,
@@ -170,7 +190,8 @@ def _to_match(item: FurnitureItem, cat: str, product: dict, score: float) -> Pro
 
 
 def match_products(
-    items: list[FurnitureItem], style: str = "Modern", budget: str | None = None
+    items: list[FurnitureItem], style: str = "Modern", budget: str | None = None,
+    small_room: bool = False,
 ) -> tuple[list[ProductMatch], str | None]:
     """Rank-then-fit: for each planned item, find its single best style/colour
     match per category (as before), then — if a budget was given — greedily
@@ -183,6 +204,11 @@ def match_products(
     Returns ``(matches, note)`` — ``note`` is ``None`` unless the budget
     actually caused items to be dropped or the fallback path was used.
     """
+    # Only pieces being bought belong on a shopping list — never ones the plan
+    # keeps or removes.
+    items = [i for i in items if i.action not in ("keep", "remove")]
+    if not items:
+        return [], None
     budget_amount = parse_budget_amount(budget)
     logger.debug("match_products: budget=%r -> budget_amount=%r, %d items", budget, budget_amount, len(items))
 
@@ -193,7 +219,7 @@ def match_products(
         candidates = _candidates(cat)
         if not candidates:
             continue
-        found = _best_pick(item, cat, candidates, style, seen)
+        found = _best_pick(item, cat, candidates, style, seen, small_room)
         if found is None:
             continue
         product, score = found
@@ -222,37 +248,7 @@ def match_products(
             any_skipped = True
             logger.debug("  skip %s ₹%.0f (would be ₹%.0f > ₹%.0f)", entry[2]["product_id"], price, running_total + price, budget_amount)
 
-    note = None
-    if not selected:
-        logger.debug("match_products: nothing fit -> cheapest-item fallback")
-        # Nothing even in the best-matched pool fits — broaden to the
-        # cheapest catalogue items overall (any category) so the shopper
-        # still sees affordable options instead of an empty list.
-        all_products = sorted(_catalogue(), key=lambda p: p["price"])
-        fallback_seen: set[str] = set()
-        for product in all_products:
-            if product["product_id"] in fallback_seen:
-                continue
-            price = float(product["price"])
-            if running_total + price <= budget_amount:
-                fallback_seen.add(product["product_id"])
-                running_total += price
-                selected.append((
-                    FurnitureItem(name=product["title"], category=product["category"]),
-                    product["category"], product, 0.0,
-                ))
-        if not selected and all_products:
-            # Even the single cheapest catalogue item exceeds the budget —
-            # best effort: show it anyway rather than an empty shopping list.
-            cheapest = all_products[0]
-            running_total = float(cheapest["price"])
-            selected = [(
-                FurnitureItem(name=cheapest["title"], category=cheapest["category"]),
-                cheapest["category"], cheapest, 0.0,
-            )]
-        note = BUDGET_TIGHT_MESSAGE
-    elif any_skipped:
-        note = BUDGET_TIGHT_MESSAGE
+    note = BUDGET_TIGHT_MESSAGE if any_skipped else None
 
     matches = [_to_match(item, cat, p, score) for item, cat, p, score in selected]
     logger.debug("match_products: result %d items, total=₹%.0f, note=%r", len(matches), running_total, note)

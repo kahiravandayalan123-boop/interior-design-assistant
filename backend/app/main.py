@@ -9,7 +9,9 @@ Interactive docs at http://127.0.0.1:8000/docs
 from __future__ import annotations
 
 import logging
-
+import os
+import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -20,8 +22,14 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .routers import chat, generate, modify, products, session, upload
 
+# Uvicorn only configures its own loggers; without this the app's INFO lines
+# (request timings, startup, provider failures) never reach the Railway logs.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("interior_design_assistant")
 settings = get_settings()
+
+STARTED_AT = time.time()
+VERSION = (os.getenv("RAILWAY_GIT_COMMIT_SHA") or "dev")[:7]
 
 app = FastAPI(
     title="AI Interior Design Assistant API",
@@ -37,6 +45,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# One line per API call with its outcome and duration, so a slow or failing
+# request can be found in the logs afterwards.
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("%s %s crashed after %.1fs", request.method, request.url.path, time.perf_counter() - start)
+        raise
+    if request.url.path.startswith("/api/") and request.method != "OPTIONS":
+        took = time.perf_counter() - start
+        log = logger.warning if response.status_code >= 500 else logger.info
+        log("%s %s -> %d in %.1fs", request.method, request.url.path, response.status_code, took)
+    return response
 
 
 # Any exception that isn't already an HTTPException is a bug — log it and
@@ -76,7 +101,9 @@ async def serve_generated(filename: str):
 
 @app.get("/health", tags=["meta"])
 async def health():
-    return {"status": "ok"}
+    # uptime resets whenever the process restarts — and a restart wipes the
+    # in-memory sessions, so this makes "did the server restart?" answerable.
+    return {"status": "ok", "version": VERSION, "uptime_seconds": int(time.time() - STARTED_AT)}
 
 
 @app.get("/api/config", tags=["meta"])
@@ -89,14 +116,13 @@ async def config():
         "using_mock": not (settings.anthropic_ready and settings.openai_ready),
         "anthropic_model": settings.anthropic_model,
         "openai_image_model": settings.openai_image_model,
+        "version": VERSION,
+        "verify_structure": settings.verify_structure,
+        "timeouts": {"anthropic": settings.anthropic_timeout, "openai_image": settings.openai_image_timeout},
     }
 
 
-@app.on_event("startup")
-async def _build_product_vector_index() -> None:
-    """Build/refresh the semantic product index once at startup so the first
-    /generate or /modify call doesn't pay the embedding cost. Never blocks
-    startup on failure — recommendations just stay empty until it succeeds."""
+def _build_index() -> None:
     try:
         from .services import vector_store
 
@@ -110,6 +136,15 @@ async def _build_product_vector_index() -> None:
             "Could not build the product vector index at startup; "
             "recommendations will be omitted until this succeeds."
         )
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    """Build the semantic product index in the background: it calls an
+    external embeddings API, and a slow reply there must never hold up the
+    server coming online."""
+    logger.info("Starting version %s; CORS origins: %s", VERSION, settings.cors_origin_list)
+    threading.Thread(target=_build_index, name="product-index", daemon=True).start()
 
 
 app.include_router(upload.router)

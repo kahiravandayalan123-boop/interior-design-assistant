@@ -58,7 +58,9 @@ async function request(path, options = {}, timeoutMs = TIMEOUT_MS.default) {
     }
     // fetch() itself throws on network failure / server unreachable / CORS.
     throw new ApiError(
-      "Can't reach the server. It may be starting up — wait a few seconds, then try again.",
+      navigator.onLine === false
+        ? "You appear to be offline. Check your internet connection, then try again."
+        : "Couldn't reach the design server. Check your connection and try again — nothing you entered has been lost.",
       0
     );
   } finally {
@@ -73,13 +75,25 @@ export function mediaUrl(path) {
   return `${BASE}${path}`;
 }
 
+// Retries a few times: this is the first call on page load, so it doubles as
+// the "is the server reachable?" check behind the connection banner.
 export async function getConfig() {
-  return request("/api/config");
+  let last;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await request("/api/config", {}, 12_000);
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+    }
+  }
+  throw last;
 }
 
-export async function uploadRoom({ style, file }) {
+export async function uploadRoom({ style, file, roomSize }) {
   const form = new FormData();
   form.append("style", style);
+  form.append("room_size", roomSize || "");
   form.append("image", file);
   return request("/api/upload", { method: "POST", body: form }, TIMEOUT_MS.analyze);
 }
@@ -116,8 +130,9 @@ export async function loadSample(src, name) {
 
 // "Modify Existing Room" flow: one call — photo + free-text instruction +
 // budget in, a finished redesign (image + shopping list) out.
-export async function modifyRoom({ file, instruction, budget }) {
+export async function modifyRoom({ file, instruction, budget, roomSize }) {
   const form = new FormData();
+  form.append("room_size", roomSize || "");
   form.append("image", file);
   form.append("instruction", instruction);
   form.append("budget", budget);

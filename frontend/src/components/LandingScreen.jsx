@@ -1,9 +1,7 @@
 // First screen: routes the user into one of two flows.
 export default function LandingScreen({ onSelect }) {
   return (
-    <div className="card landing">
-      <h2>What would you like to do?</h2>
-      <p className="card-sub">Pick how you'd like to start.</p>
+    <div className="landing">
 
       <div className="landing-options">
         <button
@@ -17,10 +15,11 @@ export default function LandingScreen({ onSelect }) {
               <path d="M12 9v6M9 12h6" />
             </svg>
           </span>
-          <span className="landing-title">New Room Design</span>
+          <span className="landing-title">Redesign in a new style</span>
           <span className="landing-desc">
-            Empty or raw room? Pick a style, answer a few questions, and design it from scratch.
+            Pick a style and answer four quick questions. We assess what you own, then restyle the room around it.
           </span>
+          <span className="landing-go">Start a redesign →</span>
         </button>
 
         <button
@@ -34,12 +33,18 @@ export default function LandingScreen({ onSelect }) {
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
             </svg>
           </span>
-          <span className="landing-title">Modify Existing Room</span>
+          <span className="landing-title">Make a specific change</span>
           <span className="landing-desc">
-            Already furnished? Tell us what to change — general or specific — and we'll redesign it.
+            Describe what you want in your own words — “make it cosier” or “swap the sofa for a smaller one”.
           </span>
+          <span className="landing-go">Describe a change →</span>
         </button>
       </div>
+      <ul className="how">
+        <li><strong>1</strong>Upload a photo of your room</li>
+        <li><strong>2</strong>Get a keep / replace verdict on each piece</li>
+        <li><strong>3</strong>See the redesign and shop the changes</li>
+      </ul>
     </div>
   );
 }

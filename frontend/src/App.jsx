@@ -20,19 +20,21 @@ import { ProgressPanel } from "./components/Spinner.jsx";
 // Estimated step timings for the progress panels (seconds from request start).
 const ANALYZE_STEPS = [
   { label: "Uploading your photo", at: 0 },
-  { label: "Analyzing furniture, layout and lighting", at: 2 },
-  { label: "Writing follow-up questions for your room", at: 12 },
+  { label: "Mapping windows, doors and room size", at: 2 },
+  { label: "Judging each piece of furniture against the room", at: 10 },
 ];
 const GENERATE_STEPS = [
-  { label: "Writing the design brief", at: 0 },
-  { label: "Rendering the redesigned room", at: 8 },
-  { label: "Matching products to your budget", at: 45 },
+  { label: "Planning what to keep, replace and add", at: 0 },
+  { label: "Rendering the redesign onto your photo", at: 15 },
+  { label: "Checking the architecture against your photo", at: 55 },
+  { label: "Building your shopping list", at: 75 },
 ];
 const MODIFY_STEPS = [
-  { label: "Analyzing your room", at: 0 },
-  { label: "Applying your requested change", at: 10 },
-  { label: "Rendering the redesigned room", at: 18 },
-  { label: "Matching products to your budget", at: 55 },
+  { label: "Assessing your room and furniture", at: 0 },
+  { label: "Planning your requested change", at: 20 },
+  { label: "Rendering the redesign onto your photo", at: 35 },
+  { label: "Checking the architecture against your photo", at: 75 },
+  { label: "Building your shopping list", at: 95 },
 ];
 
 // App states: landing -> upload -> questions -> result ("questions" only for
@@ -56,9 +58,15 @@ export default function App() {
 
   const busy = stage !== null;
 
-  useEffect(() => {
-    getConfig().then(setCfg).catch(() => setCfg(null));
-  }, []);
+  // "checking" | "ok" | "down" — a failed first contact is shown, not swallowed.
+  const [server, setServer] = useState("checking");
+  function checkServer() {
+    setServer("checking");
+    getConfig()
+      .then((c) => { setCfg(c); setServer("ok"); })
+      .catch(() => { setCfg(null); setServer("down"); });
+  }
+  useEffect(checkServer, []);
 
   function absorbWarnings(data) {
     if (data?.warnings?.length) {
@@ -197,32 +205,55 @@ export default function App() {
 
   return (
     <div className="wrap">
-      <header>
-        <h1>AI Interior Design Assistant</h1>
-        <p>
-          Design a room from scratch, or tell us what to change about one you
-          already have — either way, get an AI redesign with a matching
-          shopping list.
-        </p>
-      </header>
+      <nav className="topbar">
+        <button type="button" className="brand" onClick={restart} disabled={busy}>
+          <span className="brand-mark" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round">
+              <path d="M7 20v-4a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v4M5 20h22v4H5z" />
+            </svg>
+          </span>
+          Roomwise
+        </button>
+        <span className={`status status-${server}`}>
+          <i aria-hidden="true" />
+          {server === "ok" ? "AI services online" : server === "down" ? "Server unreachable" : "Connecting…"}
+        </span>
+      </nav>
 
-      <Stepper current={currentStep} />
+      {step === "landing" ? (
+        <header className="hero">
+          <p className="eyebrow">AI interior design assistant</p>
+          <h1>See your own room, <em>redesigned</em>.</h1>
+          <p>
+            Upload a photo. Get an honest verdict on the furniture you already
+            have, a redesign painted onto your actual room, and a shopping list
+            sized to your space and budget.
+          </p>
+        </header>
+      ) : (
+        <Stepper current={currentStep} />
+      )}
+
+      {server === "down" && (
+        <Alert tone="error" title="Can't connect to the design server">
+          The page loaded, but the AI server isn't answering. Check your internet
+          connection, then try again.
+          <div className="alert-actions">
+            <button type="button" className="alert-action" onClick={checkServer}>Retry connection</button>
+          </div>
+        </Alert>
+      )}
 
       {cfg?.using_mock && (
         <div className="banner">
-          Running on <strong>mock responses</strong>
-          {cfg.anthropic_ready ? " for image generation" : ""} — add
-          {!cfg.anthropic_ready && <code>ANTHROPIC_API_KEY</code>}
-          {!cfg.anthropic_ready && !cfg.openai_ready && " and "}
-          {!cfg.openai_ready && <code>OPENAI_API_KEY</code>} to
-          <code>backend/.env</code> and restart the backend for the real thing.
+          Demo mode: this server has no AI keys configured, so results are <strong>sample data</strong>.
         </div>
       )}
 
       {warnings.length > 0 && (
         <Alert
           tone="notice"
-          title={warnings.length === 1 ? "Using a sample for one step" : "Using samples for some steps"}
+          title="Please note"
           onDismiss={() => setWarnings([])}
         >
           {warnings.length === 1 ? (
@@ -265,7 +296,7 @@ export default function App() {
           <>
             {stage === "analyzing" && (
               <div className="card">
-                <ProgressPanel title="Analyzing your room" sub={mockSub || "Usually 10–30 seconds."} steps={ANALYZE_STEPS} />
+                <ProgressPanel title="Analyzing your room" sub={mockSub || "Usually 15–40 seconds."} steps={ANALYZE_STEPS} />
               </div>
             )}
             <div hidden={stage === "analyzing"}>
@@ -278,7 +309,7 @@ export default function App() {
           <>
             {stage === "generating" && (
               <div className="card">
-                <ProgressPanel title="Creating your redesign" sub={mockSub || "Usually 40–90 seconds — the image render is the slow part."} steps={MODIFY_STEPS} />
+                <ProgressPanel title="Creating your redesign" sub={mockSub || "Usually 1–2 minutes — the render is checked against your photo before you see it."} steps={MODIFY_STEPS} />
               </div>
             )}
             <div hidden={stage === "generating"}>
@@ -291,7 +322,7 @@ export default function App() {
           <>
             {stage === "generating" && (
               <div className="card">
-                <ProgressPanel title="Generating your redesign" sub={mockSub || "Usually 30–80 seconds — the image render is the slow part."} steps={GENERATE_STEPS} />
+                <ProgressPanel title="Generating your redesign" sub={mockSub || "Usually 1–2 minutes — the render is checked against your photo before you see it."} steps={GENERATE_STEPS} />
               </div>
             )}
             <div hidden={stage === "generating"}>

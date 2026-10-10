@@ -3,12 +3,14 @@ import StylePicker from "./StylePicker.jsx";
 import Spinner from "./Spinner.jsx";
 import Alert from "./Alert.jsx";
 import SampleRooms from "./SampleRooms.jsx";
+import RoomSizePicker from "./RoomSizePicker.jsx";
 
 export default function UploadStep({ onSubmit, busy }) {
   const [style, setStyle] = useState("Modern");
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [error, setError] = useState("");
+  const [roomSize, setRoomSize] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef(null);
 
@@ -58,13 +60,14 @@ export default function UploadStep({ onSubmit, busy }) {
     e.preventDefault();
     setError("");
     if (!file) return setError("Choose a room photo first.");
-    onSubmit({ style, file });
+    onSubmit({ style, file, roomSize });
   }
 
   return (
     <form className="card" onSubmit={submit}>
-      <h2>Upload a room photo</h2>
-      <p className="card-sub">We'll analyze the furniture, layout, and lighting in your space.</p>
+      <p className="eyebrow">Redesign in a new style</p>
+      <h2>Start with a photo of your room</h2>
+      <p className="card-sub">We'll assess the furniture you already have, the layout and the light — then tell you what to keep and what to change.</p>
 
       <span className="field" id="room-label">Room photo</span>
       <div
@@ -113,7 +116,10 @@ export default function UploadStep({ onSubmit, busy }) {
       </div>
       <SampleRooms onPick={acceptFile} disabled={busy} />
 
-      <h3>Target style</h3>
+      <h3>Room size</h3>
+      <RoomSizePicker value={roomSize} onChange={setRoomSize} disabled={busy} />
+
+      <h3>Style you want</h3>
       <StylePicker value={style} onChange={setStyle} disabled={busy} />
 
       {error && <Alert tone="notice" onDismiss={() => setError("")}>{error}</Alert>}

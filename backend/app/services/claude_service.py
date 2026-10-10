@@ -1,20 +1,31 @@
-"""Claude-powered steps: room-photo analysis, adaptive follow-up questions, and
-building the text-to-image prompt for the redesign.
+"""Claude-powered steps: room analysis (incl. architecture inventory and
+keep/replace verdicts on existing furniture), the redesign plan + image
+prompt, and the structure check that compares a render with the original.
 
-Each step tries the real Anthropic call (when a key is configured) and falls
-back to a deterministic mock on failure. Because these run at upload time and
-must never dead-end the demo, even transient errors degrade to the mock — the
-returned ``warning`` string lets the UI show a soft notice explaining why.
+With an API key configured every step is a real call and a failure raises a
+ServiceError the UI can show and retry — sample data is only ever used when
+no key is configured (or FORCE_MOCK is on). The follow-up questions are
+built in code from the analysis, so they are identical from run to run.
 """
 from __future__ import annotations
 
+import base64
 import json
 import re
 from typing import Any
 
 from ..config import get_settings
-from ..schemas import VALID_BUDGETS, FurnitureItem, Question, RoomAnalysis
-from .errors import run_or_degrade
+from ..schemas import (
+    ROOM_SIZES,
+    VALID_ACTIONS,
+    VALID_BUDGETS,
+    FurnitureItem,
+    Question,
+    RoomAnalysis,
+    RoomStructure,
+    StructureCheck,
+)
+from .errors import ServiceError, run_real
 
 settings = get_settings()
 
@@ -39,6 +50,13 @@ def _get_client():
 # not a target: the visible replies here are still short.
 _MAX_TOKENS = 16000
 
+CATEGORIES = (
+    "sofa, armchair, coffee table, side table, dining table, dining chair, rug, "
+    "floor lamp, table lamp, pendant light, console, bookshelf, sideboard, bench, "
+    "ottoman, curtains, plant, wall art, mirror, throw pillow, vase, storage basket, "
+    "bed, wardrobe, desk, tv, decor"
+)
+
 
 def _extract_json(text: str) -> Any:
     """Claude usually returns clean JSON; strip code fences / prose just in case."""
@@ -55,499 +73,417 @@ def _extract_json(text: str) -> Any:
 
 
 def _text_of(resp) -> str:
-    if getattr(resp, "stop_reason", None) == "max_tokens":
+    stop = getattr(resp, "stop_reason", None)
+    if stop == "refusal":
+        raise ServiceError(
+            "The design service declined to process this photo. Please try a different one.",
+            status_code=422, kind="refusal",
+        )
+    if stop == "max_tokens":
         raise ValueError("model response was cut off at max_tokens")
     return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+
+
+def _ask_json(system: str, content: Any) -> Any:
+    resp = _get_client().messages.create(
+        model=settings.anthropic_model,
+        max_tokens=_MAX_TOKENS,
+        system=system,
+        messages=[{"role": "user", "content": content}],
+    )
+    return _extract_json(_text_of(resp))
+
+
+def _image_block(data: bytes, media_type: str) -> dict:
+    return {
+        "type": "image",
+        "source": {
+            "type": "base64",
+            "media_type": media_type,
+            "data": base64.standard_b64encode(data).decode("utf-8"),
+        },
+    }
+
+
+def _clean_items(raw: list, *, allowed: tuple[str, ...]) -> list[FurnitureItem]:
+    items = []
+    for it in raw or []:
+        item = FurnitureItem(**{k: ("" if v is None else str(v)) for k, v in it.items() if k in FurnitureItem.model_fields})
+        action = item.action.strip().lower()
+        item.action = action if action in allowed else ""
+        if item.name or item.category:
+            items.append(item)
+    return items
 
 
 # ===========================================================================
 # 1. Analyse the uploaded room photo
 # ===========================================================================
 ANALYSIS_SYSTEM = (
-    "You are an interior designer analysing a photo of a room. "
-    "Identify the room type, existing furniture and large objects, the layout, "
-    "and the lighting. Respond with ONLY a JSON object, no prose, matching:\n"
+    "You are an experienced interior designer assessing a photo of a room.\n"
+    "Report only what is actually visible in the photo. Never infer rooms, "
+    "stairs, windows or doors that are outside the frame.\n\n"
+    "Respond with ONLY a JSON object, no prose:\n"
     "{\n"
     '  "room_type": str,\n'
-    '  "summary": str,  // 1-2 sentences, mention size/feel\n'
-    '  "existing_furniture": [{"name": str, "category": str, "description": str, "color": str}],\n'
-    '  "layout_notes": str,  // note if the room reads small / tight / open\n'
-    '  "lighting": str,  // note if it reads dark / dim / bright\n'
+    '  "summary": str,  // 1-2 sentences on size and feel\n'
+    '  "size_class": "small"|"medium"|"large",  // small <= ~120 sq ft, large >= ~250 sq ft\n'
+    '  "size_estimate": str,  // e.g. "about 110 sq ft (roughly 10 x 11 ft)"\n'
+    '  "structure": {  // fixed architecture, described by where it sits in the frame\n'
+    '    "windows": [str],  // ONE entry per window, e.g. "left wall: pair of tall white double-hung windows"\n'
+    '    "doors": [str],  // one entry per door, doorway or opening\n'
+    '    "stairs": str,  // "" if no staircase is visible\n'
+    '    "other_fixed": [str]  // beams, columns, fireplace, built-ins, ceiling fan, AC unit\n'
+    "  },\n"
+    '  "existing_furniture": [{\n'
+    '    "name": str, "category": str, "description": str, "color": str,\n'
+    '    "size": str,  // rough footprint, e.g. "200 x 90 cm"\n'
+    '    "action": "keep"|"replace"|"remove",\n'
+    '    "reason": str  // ONE short sentence tied to THIS room\n'
+    "  }],\n"
+    '  "layout_notes": str,\n'
+    '  "lighting": str,\n'
     '  "detected_colors": [str]\n'
-    "}\n"
-    "Use lowercase generic categories like: sofa, coffee table, rug, floor lamp, "
-    "table lamp, armchair, dining chair, dining table, bookshelf, console, "
-    "sideboard, side table, curtains, plant, wall art, mirror, ottoman."
+    "}\n\n"
+    "How to judge each existing piece (be decisive, like a designer on site):\n"
+    "- Scale: is it the right size for this room? A 3-seater plus a 2-seater "
+    "in a 100 sq ft room is too much seating — keep one, remove the other.\n"
+    "- Circulation: main walkways need about 75 cm clear; doors and windows "
+    "must not be blocked.\n"
+    "- Function and condition: does it earn its floor space?\n"
+    "- keep = it suits the room as is. replace = the room needs this kind of "
+    "piece but this one is the wrong size or shape. remove = the room is "
+    "better without it.\n"
+    "- Group small accessories (cushions, bowls, books) into at most two entries.\n"
+    f"Use lowercase categories from: {CATEGORIES}."
 )
 
 
 def analyze_room(
-    image_bytes: bytes, media_type: str, style: str | None
+    image_bytes: bytes, media_type: str, style: str | None, room_size: str = ""
 ) -> tuple[RoomAnalysis, bool, str | None]:
-    """Analyse an uploaded room photo. ``style`` is the target style for the
-    "New Room Design" flow; pass ``None`` for the "Modify Existing Room" flow,
-    which has no target style — just a free-text instruction handled later by
-    :func:`build_modify_prompt`."""
+    """Analyse a room photo. ``style`` is the target style for the "New Room
+    Design" flow (``None`` for "Modify Existing Room"). ``room_size`` is the
+    user's own size choice (a ROOM_SIZES key) or "" to estimate from the photo."""
     if not settings.anthropic_ready:
-        return _mock_analysis(style), True, None
+        return _apply_user_size(_mock_analysis(style), room_size), True, None
 
-    import base64
-
-    b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+    text = "Assess this room as it is now."
     if style:
-        instruction_text = (
-            f"Analyse this room. The user wants to redesign it in a "
-            f"{style} style, but describe what is ACTUALLY there now."
-        )
-    else:
-        instruction_text = (
-            "Analyse this already-furnished room and describe what is ACTUALLY "
-            "there now — the user will separately describe what they want changed."
+        text += f" The owner wants to restyle it as {style}; weigh that when judging each piece."
+    if room_size in ROOM_SIZES:
+        text += (
+            f" The owner states the room size is: {ROOM_SIZES[room_size]}. Treat that as "
+            f'fact: set size_class to "{room_size}" and judge every piece against it.'
         )
 
     def _real() -> RoomAnalysis:
-        resp = _get_client().messages.create(
-            model=settings.anthropic_model,
-            max_tokens=_MAX_TOKENS,
-            system=ANALYSIS_SYSTEM,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {"type": "base64", "media_type": media_type, "data": b64},
-                        },
-                        {"type": "text", "text": instruction_text},
-                    ],
-                }
-            ],
-        )
-        return RoomAnalysis(**_extract_json(_text_of(resp)))
+        data = _ask_json(ANALYSIS_SYSTEM, [_image_block(image_bytes, media_type), {"type": "text", "text": text}])
+        data["existing_furniture"] = [
+            i.model_dump() for i in _clean_items(data.get("existing_furniture"), allowed=("keep", "replace", "remove"))
+        ]
+        data["structure"] = RoomStructure(**(data.get("structure") or {})).model_dump()
+        analysis = RoomAnalysis(**data)
+        if analysis.size_class not in ROOM_SIZES:
+            analysis.size_class = "medium"
+        return analysis
 
-    analysis, warning = run_or_degrade(
-        _real, lambda: _mock_analysis(style), provider="anthropic", degrade_transient=True
+    analysis = run_real(_real, provider="anthropic", what="analysing the photo")
+    return _apply_user_size(analysis, room_size), False, None
+
+
+def _apply_user_size(analysis: RoomAnalysis, room_size: str) -> RoomAnalysis:
+    if room_size in ROOM_SIZES:
+        analysis.size_class = room_size
+        analysis.size_estimate = ROOM_SIZES[room_size]
+        analysis.size_from_user = True
+    return analysis
+
+
+# ===========================================================================
+# 2. Follow-up questions — fixed set, worded in code, hints from the analysis
+# ===========================================================================
+def _budget_question() -> Question:
+    return Question(
+        id="budget",
+        prompt="What's your budget for new pieces?",
+        kind="budget",
+        options=list(VALID_BUDGETS),
+        hint="Covers only what you'd buy — pieces you keep cost nothing.",
     )
-    return analysis, warning is not None, warning
-
-
-# ===========================================================================
-# 2. Adaptive follow-up questions
-# ===========================================================================
-QUESTIONS_SYSTEM = (
-    "You are an interior designer preparing to redesign a room. Given the room "
-    "analysis and target style, write 3-4 SHORT follow-up questions whose answers "
-    "would most change your design. Rules:\n"
-    "- The FIRST question must be about budget, in Indian Rupees, with exactly "
-    "these three options: ₹10,000, ₹20,000, ₹30,000 (this is fixed and will be "
-    "enforced regardless of what you write, so keep it simple).\n"
-    "- Make the others SPECIFIC to this room: reference furniture that was "
-    "detected by name, and the room's size and lighting. e.g. if a sofa was "
-    "detected, ask whether to keep/replace/add seating; if the room reads small, "
-    "ask about space priorities; if it reads dark, ask about lighting.\n"
-    "- Give each question 3-5 concrete multiple-choice options.\n"
-    "- The last question may be about colour and may be marked optional.\n"
-    "Respond with ONLY a JSON array; each item:\n"
-    '{"id": str (slug), "prompt": str, "kind": '
-    '"budget"|"seating"|"space"|"storage"|"lighting"|"colors"|"priorities"|"other", '
-    '"options": [str], "multi": bool, "optional": bool}'
-)
 
 
 def generate_questions(
     analysis: RoomAnalysis, style: str
 ) -> tuple[list[Question], bool, str | None]:
-    if not settings.anthropic_ready:
-        return _adaptive_questions(analysis, style), True, None
+    """Four single-choice questions, always the same ones in the same order.
+    Each has mutually exclusive options; only the hints change per room."""
+    items = analysis.existing_furniture
+    keep = sum(1 for f in items if f.action == "keep")
+    change = sum(1 for f in items if f.action in ("replace", "remove"))
 
-    def _real() -> list[Question]:
-        resp = _get_client().messages.create(
-            model=settings.anthropic_model,
-            max_tokens=_MAX_TOKENS,
-            system=QUESTIONS_SYSTEM,
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Target style: {style}\n"
-                        f"Room analysis JSON:\n{analysis.model_dump_json(indent=2)}"
-                    ),
-                }
-            ],
+    if items:
+        second = Question(
+            id="scope", kind="scope",
+            prompt="How much of the room should change?",
+            options=["Light refresh", "Balanced update", "Full makeover"],
+            hint=(
+                f"Our read of your room: keep {keep} piece{'s' if keep != 1 else ''}, "
+                f"change {change}. Balanced follows that advice."
+            ),
         )
-        data = _extract_json(_text_of(resp))
-        questions = [Question(**q) for q in data]
-        if not questions:
-            raise ValueError("model returned no questions")
-        # Always enforce our fixed ₹10k/₹20k/₹30k budget tiers, regardless of
-        # what the model proposed for that question (or whether it asked one).
-        non_budget = [q for q in questions if not (q.kind == "budget" or q.id == "budget")][:3]
-        return [_budget_question()] + non_budget
+    else:
+        second = Question(
+            id="scope", kind="scope",
+            prompt="How furnished should the room be?",
+            options=["Essentials only", "Comfortably furnished", "Fully styled"],
+            hint="The room looks empty, so everything here would be new.",
+        )
 
-    questions, warning = run_or_degrade(
-        _real,
-        lambda: _adaptive_questions(analysis, style),
-        provider="anthropic",
-        degrade_transient=True,
-    )
-    return questions, warning is not None, warning
+    text = f"{analysis.layout_notes} {analysis.lighting}".lower()
+    if analysis.size_class == "small":
+        priority_hint = "This is a small room, so open floor space usually matters most."
+    elif any(k in text for k in ("dim", "dark", "low light", "little natural")):
+        priority_hint = "The room reads a little dark, so lighting is worth prioritising."
+    else:
+        priority_hint = "Pick the one thing the redesign should get right."
+
+    colours = ", ".join(c for c in analysis.detected_colors[:3] if c)
+    return [
+        _budget_question(),
+        second,
+        Question(
+            id="priority", kind="priorities",
+            prompt="What matters most?",
+            options=["Open floor space", "Storage", "Seating", "Lighting", "A cosier feel"],
+            hint=priority_hint,
+        ),
+        Question(
+            id="palette", kind="colors", optional=True,
+            prompt="Which colour direction?",
+            options=["Keep current colours", "Light and neutral", "Warm and earthy", "Cool and calm", "Bold accents"],
+            hint=f"Right now the room is mostly {colours}." if colours else "",
+        ),
+    ], not settings.anthropic_ready, None
 
 
 # ===========================================================================
-# 3. Build the text-to-image prompt + planned furniture list
+# 3. Redesign plan + image prompt (both flows)
 # ===========================================================================
-PROMPT_SYSTEM = (
-    "You are an interior designer writing a single detailed prompt for an "
-    "AI image generator (DALL-E) to render a photorealistic redesigned room. "
-    "Combine the original room analysis, the target style, and the user's "
-    "answers. Keep the room's architecture (windows, doors, proportions) but "
-    "restyle furniture, textiles, colours and decor to fit the budget and "
-    "priorities the user gave. If the answers include an 'additional_request', "
-    "it is the user's own words about what to change — implement it literally "
-    "and precisely. Respond with ONLY JSON:\n"
+EXTRA_REQUEST_ID = "additional_request"
+
+PLAN_SYSTEM = (
+    "You are an interior designer producing a redesign plan for a real room, "
+    "plus a prompt for an AI image editor that will repaint the owner's own "
+    "photo. You get a JSON assessment of the room (its size, fixed "
+    "architecture, and each existing piece with a keep/replace/remove verdict) "
+    "and the owner's brief.\n\n"
+    "Respond with ONLY JSON:\n"
     "{\n"
-    '  "image_prompt": str,  // one paragraph, <= 90 words, photorealistic, include camera framing\n'
-    '  "planned_furniture": [{"name": str, "category": str, "description": str, "color": str}]\n'
-    "     // 6-10 concrete pieces you are placing in the redesign\n"
-    "}"
+    '  "image_prompt": str,  // one paragraph, <= 110 words\n'
+    '  "planned_furniture": [{\n'
+    '    "name": str, "category": str, "description": str, "color": str,\n'
+    '    "size": str,  // footprint in cm, e.g. "140 x 80 cm"\n'
+    '    "action": "keep"|"replace"|"remove"|"add",\n'
+    '    "reason": str  // ONE short sentence\n'
+    "  }]\n"
+    "}\n\n"
+    "Plan rules:\n"
+    "- Account for EVERY existing piece exactly once, as keep, replace or "
+    "remove. For replace, describe the NEW piece and say in reason what it "
+    "replaces and why. Then list anything new as add.\n"
+    "- Start from the verdicts in the assessment; change one only when the "
+    "owner's brief requires it. If the owner gives a specific instruction, "
+    "implement it literally.\n"
+    "- Budget covers only replace + add pieces, in Indian Rupees. Typical "
+    "prices: sofa 35-70k, armchair 10-25k, dining table 25-55k, bookshelf "
+    "7-20k, coffee table 7-20k, rug 5-15k, lamp 3-8k, mirror 3-7k, wall art "
+    "3-6k, curtains 3-6k, plant 2-4k, cushions 1-3k. Do not plan purchases "
+    "that cannot fit the budget; if a piece should ideally be replaced but is "
+    "unaffordable, keep it and say so in reason.\n"
+    "- Everything must physically fit. Give every piece a realistic size and "
+    "keep about 75 cm clear on walkways; never block a door or window.\n"
+    "- SMALL rooms (about 120 sq ft or less): at most one sofa, no wider than "
+    "a 2-seater (about 150 cm); no sectionals, no dining table for more than "
+    "two, no coffee table over 90 cm (prefer nesting or a slim side table), "
+    "storage that goes up the wall rather than across the floor, and no more "
+    "than 3 new floor-standing pieces. Prefer removing to adding.\n"
+    f"- Use lowercase categories from: {CATEGORIES}.\n\n"
+    "image_prompt rules:\n"
+    "- Describe ONLY furniture, decor, textiles, lamps, colours and finishes, "
+    "and where each sits. Name kept pieces as unchanged and removed pieces as "
+    "gone, leaving clear floor.\n"
+    "- Do not describe, add or alter windows, doors, stairs, walls, ceiling, "
+    "flooring layout or the camera view — those are locked separately."
 )
 
 
-# Answer id used for the user's optional free-text change request (see
-# routers/chat.py), so both the real and mock prompt builders can find it.
-EXTRA_REQUEST_ID = "additional_request"
+def _plan(analysis: RoomAnalysis, brief: str, mock_fn) -> tuple[str, list[FurnitureItem], bool, str | None]:
+    if not settings.anthropic_ready:
+        prompt, items = mock_fn()
+        return prompt, items, True, None
+
+    def _real() -> tuple[str, list[FurnitureItem]]:
+        data = _ask_json(
+            PLAN_SYSTEM,
+            f"Room assessment JSON:\n{analysis.model_dump_json(indent=2)}\n\nOwner's brief:\n{brief}",
+        )
+        prompt = str(data["image_prompt"]).strip()
+        items = _clean_items(data.get("planned_furniture"), allowed=VALID_ACTIONS)
+        if not prompt or not items:
+            raise ValueError("plan was missing the image prompt or the furniture list")
+        return prompt, items
+
+    prompt, items = run_real(_real, provider="anthropic", what="planning the redesign")
+    return prompt, items, False, None
 
 
 def build_image_prompt(
-    analysis: RoomAnalysis, style: str, answers: list[dict[str, str]]
+    analysis: RoomAnalysis, style: str, answers: list[dict[str, str]], questions: list[Question] | None = None
 ) -> tuple[str, list[FurnitureItem], bool, str | None]:
-    if not settings.anthropic_ready:
-        prompt, items = _mock_prompt(analysis, style, answers)
-        return prompt, items, True, None
-
-    answer_text = (
-        "\n".join(f"- {a.get('question_id', a.get('id', '?'))}: {a['answer']}" for a in answers)
-        or "- (none given)"
-    )
-
-    def _real() -> tuple[str, list[FurnitureItem]]:
-        resp = _get_client().messages.create(
-            model=settings.anthropic_model,
-            max_tokens=_MAX_TOKENS,
-            system=PROMPT_SYSTEM,
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Target style: {style}\n\n"
-                        f"Original room analysis JSON:\n{analysis.model_dump_json(indent=2)}\n\n"
-                        f"User answers:\n{answer_text}"
-                    ),
-                }
-            ],
-        )
-        data = _extract_json(_text_of(resp))
-        prompt = str(data["image_prompt"]).strip()
-        if not prompt:
-            raise ValueError("empty image_prompt")
-        items = [FurnitureItem(**it) for it in data.get("planned_furniture", [])]
-        if not items:
-            _, items = _mock_prompt(analysis, style, answers)
-        return prompt, items
-
-    (prompt, items), warning = run_or_degrade(
-        _real,
-        lambda: _mock_prompt(analysis, style, answers),
-        provider="anthropic",
-        degrade_transient=True,
-    )
-    return prompt, items, warning is not None, warning
-
-
-# ===========================================================================
-# 3b. "Modify Existing Room" flow — build the prompt from a free-text
-#     instruction instead of a style + Q&A round trip.
-# ===========================================================================
-MODIFY_SYSTEM = (
-    "You are an interior designer redesigning an ALREADY-FURNISHED room based on "
-    "a homeowner's free-text instruction. You are given a JSON analysis of what "
-    "is actually in the room now, plus their instruction, which may be GENERAL "
-    "(e.g. 'make it more appealing', 'freshen it up') or SPECIFIC (e.g. 'move the "
-    "table near the window to be near the bed instead', 'replace the sofa with "
-    "something lighter'). Rules:\n"
-    "- If the instruction is specific, implement it literally and precisely — "
-    "do not ignore or water down any detail it names.\n"
-    "- If the instruction is general, use good design judgement within the "
-    "given budget, while keeping the room clearly recognisable as the same room.\n"
-    "- Keep everything the instruction doesn't mention as close to the original "
-    "as sensible (same architecture — windows, doors, proportions — and reuse "
-    "existing furniture where it isn't being changed).\n"
-    "Respond with ONLY JSON:\n"
-    "{\n"
-    '  "image_prompt": str,  // one paragraph, <= 90 words, photorealistic, include camera framing\n'
-    '  "planned_furniture": [{"name": str, "category": str, "description": str, "color": str}]\n'
-    "     // the FULL set of furniture/decor that should appear in the redesigned room —\n"
-    "     // both pieces kept from the original and any changed/added/moved pieces\n"
-    "}"
-)
+    labels = {q.id: q.prompt for q in (questions or [])}
+    lines = [f"- Target style: {style}"]
+    for a in answers:
+        qid = a.get("question_id", a.get("id", "?"))
+        if qid == EXTRA_REQUEST_ID:
+            lines.append(f"- Specific instruction from the owner (implement literally): {a['answer']}")
+        else:
+            lines.append(f"- {labels.get(qid, qid)} {a['answer']}")
+    return _plan(analysis, "\n".join(lines), lambda: _mock_prompt(analysis, style, answers))
 
 
 def build_modify_prompt(
     analysis: RoomAnalysis, instruction: str, budget: str | None
 ) -> tuple[str, list[FurnitureItem], bool, str | None]:
-    if not settings.anthropic_ready:
-        prompt, items = _mock_modify_prompt(analysis, instruction)
-        return prompt, items, True, None
+    brief = (
+        f"- The room is already furnished and the owner wants this change: {instruction}\n"
+        "- If that is specific, implement it literally; if it is general, use the "
+        "verdicts in the assessment and good judgement.\n"
+        "- Keep the room recognisably the same room; leave alone whatever the "
+        "instruction and the verdicts don't touch.\n"
+        f"- Budget for new pieces: {budget or 'not specified'}"
+    )
+    return _plan(analysis, brief, lambda: _mock_modify_prompt(analysis, instruction))
 
-    def _real() -> tuple[str, list[FurnitureItem]]:
-        resp = _get_client().messages.create(
-            model=settings.anthropic_model,
-            max_tokens=_MAX_TOKENS,
-            system=MODIFY_SYSTEM,
-            messages=[
+
+# ===========================================================================
+# 4. Structure check — does the render still show the same room?
+# ===========================================================================
+VERIFY_SYSTEM = (
+    "You are checking an AI-edited interior photo against the original. "
+    "Image 1 is the ORIGINAL room, image 2 is the REDESIGN.\n"
+    "Compare ONLY the fixed architecture: windows (how many, which wall, "
+    "roughly where and how big), doors and openings, stairs, the walls and "
+    "room shape, and the camera viewpoint.\n"
+    "IGNORE furniture, decor, lamps, rugs, colours, lighting mood, curtains or "
+    "blinds, wall art and mirrors (framed art or a mirror is not a window; a "
+    "window partly hidden behind new furniture or curtains still counts as "
+    "present).\n"
+    "Report an issue only when you are confident an architectural element was "
+    "added, removed, moved or changed into something else.\n"
+    'Respond with ONLY JSON: {"consistent": bool, "issues": [str]} — each '
+    "issue one short sentence saying what the redesign got wrong, e.g. "
+    '"The window on the right wall was replaced by a blank wall panel."'
+)
+
+
+def verify_structure(original: bytes, render: bytes, structure: RoomStructure) -> StructureCheck:
+    """Compare the render with the original. Never raises: if the check itself
+    fails it reports ``skipped`` rather than blocking a finished render."""
+    if not (settings.anthropic_ready and settings.verify_structure):
+        return StructureCheck(status="skipped")
+    from .image_prep import downscale_jpeg
+
+    try:
+        data = _ask_json(
+            VERIFY_SYSTEM,
+            [
+                {"type": "text", "text": "Image 1 — ORIGINAL:"},
+                _image_block(downscale_jpeg(original), "image/jpeg"),
+                {"type": "text", "text": "Image 2 — REDESIGN:"},
+                _image_block(downscale_jpeg(render), "image/jpeg"),
                 {
-                    "role": "user",
-                    "content": (
-                        f"Current room analysis JSON:\n{analysis.model_dump_json(indent=2)}\n\n"
-                        f"User's instruction: {instruction}\n\n"
-                        f"Budget for this refresh: {budget or '(not specified)'}"
-                    ),
-                }
+                    "type": "text",
+                    "text": "Architecture recorded from the original:\n"
+                    + structure.model_dump_json(indent=2),
+                },
             ],
         )
-        data = _extract_json(_text_of(resp))
-        prompt = str(data["image_prompt"]).strip()
-        if not prompt:
-            raise ValueError("empty image_prompt")
-        items = [FurnitureItem(**it) for it in data.get("planned_furniture", [])]
-        if not items:
-            _, items = _mock_modify_prompt(analysis, instruction)
-        return prompt, items
+        issues = [str(i).strip() for i in (data.get("issues") or []) if str(i).strip()][:5]
+        ok = bool(data.get("consistent")) and not issues
+        return StructureCheck(status="passed" if ok else "mismatch", issues=[] if ok else issues)
+    except Exception:  # noqa: BLE001 - the check is best-effort by design
+        import logging
 
-    (prompt, items), warning = run_or_degrade(
-        _real,
-        lambda: _mock_modify_prompt(analysis, instruction),
-        provider="anthropic",
-        degrade_transient=True,
-    )
-    return prompt, items, warning is not None, warning
+        logging.getLogger("interior_design_assistant").exception("Structure check failed; skipping it.")
+        return StructureCheck(status="skipped")
 
 
 # ===========================================================================
-# Mock fallbacks
+# Sample data — only used when no ANTHROPIC_API_KEY is configured
 # ===========================================================================
-def _mock_analysis(style: str) -> RoomAnalysis:
+def _mock_analysis(style: str | None) -> RoomAnalysis:
     return RoomAnalysis(
         room_type="living room",
         summary=(
-            "A smallish living room that feels a bit tight and dim — a worn "
-            "three-seat sofa, a dark wood coffee table, and not much storage. "
-            "(Sample analysis — set ANTHROPIC_API_KEY in backend/.env for a real one.)"
+            "A small living room that feels tight and a little dim. "
+            "(Sample analysis — no ANTHROPIC_API_KEY is configured.)"
+        ),
+        size_class="small",
+        size_estimate="about 110 sq ft (roughly 10 x 11 ft)",
+        structure=RoomStructure(
+            windows=["right wall: one large window"],
+            doors=["back wall, far right: a single door"],
         ),
         existing_furniture=[
-            FurnitureItem(name="Three-seat sofa", category="sofa", description="Fabric, sagging cushions", color="brown"),
-            FurnitureItem(name="Coffee table", category="coffee table", description="Scratched veneer", color="dark wood"),
-            FurnitureItem(name="Floor lamp", category="floor lamp", description="Basic torchiere", color="black"),
-            FurnitureItem(name="Area rug", category="rug", description="Small, sits off-centre", color="beige"),
-            FurnitureItem(name="TV stand", category="console", description="Overcrowded, open shelves", color="black"),
+            FurnitureItem(name="Three-seat sofa", category="sofa", description="Fabric, sagging cushions", color="brown",
+                          size="210 x 90 cm", action="replace", reason="Too long for a room this size; a 2-seater frees the walkway."),
+            FurnitureItem(name="Two-seat sofa", category="sofa", description="Matching loveseat", color="brown",
+                          size="150 x 90 cm", action="remove", reason="Two sofas crowd a 110 sq ft room."),
+            FurnitureItem(name="Coffee table", category="coffee table", description="Scratched veneer", color="dark wood",
+                          size="120 x 60 cm", action="replace", reason="Oversized for the remaining floor space."),
+            FurnitureItem(name="Floor lamp", category="floor lamp", description="Basic torchiere", color="black",
+                          size="30 x 30 cm", action="keep", reason="Small footprint and the room needs the light."),
+            FurnitureItem(name="Area rug", category="rug", description="Sits off-centre", color="beige",
+                          size="160 x 230 cm", action="keep", reason="Right scale once it is re-centred."),
         ],
-        layout_notes="Sofa on the long wall, TV opposite; the walkway by the window is tight and the room reads small.",
-        lighting="One north-facing window; mostly warm overhead light in the evening — on the dim side.",
+        layout_notes="Sofa on the long wall, TV opposite; the walkway by the window is tight.",
+        lighting="One window; on the dim side in the evening.",
         detected_colors=["brown", "beige", "off-white"],
     )
-
-
-def _budget_question() -> Question:
-    return Question(
-        id="budget",
-        prompt="What's your budget for this refresh?",
-        kind="budget",
-        options=list(VALID_BUDGETS),
-    )
-
-
-_SEATING_CATS = {"sofa", "couch", "sectional", "loveseat", "settee", "armchair", "bench"}
-
-
-def _adaptive_questions(analysis: RoomAnalysis, style: str) -> list[Question]:
-    """Pick budget + the 2-3 most relevant questions for what was detected."""
-    text = " ".join(
-        [analysis.summary, analysis.layout_notes, analysis.lighting]
-        + [f"{f.name} {f.description}" for f in analysis.existing_furniture]
-    ).lower()
-
-    seating = [f for f in analysis.existing_furniture if f.category.lower() in _SEATING_CATS]
-    small = any(k in text for k in ("small", "tight", "narrow", "cramped", "compact", "reads small", "limited space"))
-    dark = any(k in text for k in ("dark", "dim", "limited natural", "north-facing", "low light", "little light", "no window"))
-    cluttered = any(k in text for k in ("clutter", "crowded", "overcrowd", "messy", "no storage", "not much storage", "lacks storage"))
-    colors = [c for c in analysis.detected_colors if c][:3]
-
-    pool: list[Question] = []
-
-    if seating:
-        name = seating[0].name.lower()
-        pool.append(Question(
-            id="seating", kind="seating",
-            prompt=f"You've got a {name} in there now — what should happen with the seating?",
-            options=["Keep it and restyle around it", "Replace it with something new",
-                     "Add another seat or two", "Not sure — you decide"],
-        ))
-    else:
-        pool.append(Question(
-            id="seating", kind="seating",
-            prompt="There's no clear seating in the photo — what do you want?",
-            options=["A sofa", "Sofa + an armchair", "A sectional", "Just a pair of chairs"],
-        ))
-
-    if small:
-        pool.append(Question(
-            id="space", kind="space",
-            prompt="The room reads a little tight — what's the priority?",
-            options=["Maximise open floor space", "Work in more storage",
-                     "Still fit more seating", "Keep it airy and pared-back"],
-        ))
-    else:
-        pool.append(Question(
-            id="priorities", kind="priorities", multi=True,
-            prompt="What matters most for the redesign? (pick up to two)",
-            options=["More open space", "More storage", "More seating",
-                     "Better lighting", "More display / decor"],
-        ))
-
-    if dark:
-        pool.append(Question(
-            id="lighting", kind="lighting",
-            prompt="Lighting looks limited in here — how should we handle it?",
-            options=["Layered lighting (lamps + overhead)", "Lighter colours to bounce light",
-                     "One statement fixture", "Keep it warm and moody"],
-        ))
-    elif cluttered:
-        pool.append(Question(
-            id="storage", kind="storage",
-            prompt="How much storage do you need?",
-            options=["A lot — hide the clutter", "Some closed storage",
-                     "Mostly open shelving", "Minimal — keep it sparse"],
-        ))
-
-    if colors:
-        pool.append(Question(
-            id="colors", kind="colors", optional=True,
-            prompt=f"Your room's mostly {', '.join(colors)} right now — where do you want to take the palette?",
-            options=["Keep a similar palette", "Warmer and cosier", "Cooler and calmer",
-                     "Bolder, with strong accents", "Neutral and timeless"],
-        ))
-    else:
-        pool.append(Question(
-            id="colors", kind="colors", optional=True,
-            prompt="Any colours you want to lean into or avoid?",
-            options=["Warm neutrals", "Cool greys", "Earthy greens",
-                     "Bold accents", "No preference"],
-        ))
-
-    # budget first, then contextual questions, de-duped by id, capped at 4.
-    picked: list[Question] = [_budget_question()]
-    seen = {"budget"}
-    for q in pool:
-        if q.id not in seen:
-            picked.append(q)
-            seen.add(q.id)
-        if len(picked) == 4:
-            break
-    return picked
-
-
-def _answers_map(answers: list[dict[str, str]]) -> dict[str, str]:
-    out: dict[str, str] = {}
-    for a in answers:
-        key = a.get("question_id") or a.get("id") or ""
-        if key:
-            out[key] = a.get("answer", "")
-    return out
 
 
 def _mock_prompt(
     analysis: RoomAnalysis, style: str, answers: list[dict[str, str]]
 ) -> tuple[str, list[FurnitureItem]]:
-    palette = {
-        "Modern": "warm oak, off-white walls, matte black accents, one terracotta note",
-        "Minimalist": "white walls, pale wood, soft greys, a single muted accent",
-        "Traditional": "rich walnut, deep burgundy and green, brass, warm ivory",
-        "Scandinavian": "white walls, light beech, soft grey and blush textiles",
-    }.get(style, "balanced neutral tones")
-
-    amap = _answers_map(answers)
-    extra = amap.pop(EXTRA_REQUEST_ID, "").strip()
-    wants_storage = any("storage" in v.lower() for v in amap.values())
-    wants_seating = any(("seat" in v.lower()) or ("sofa" in v.lower()) for v in amap.values())
-
+    extra = next((a.get("answer", "") for a in answers if a.get("question_id") == EXTRA_REQUEST_ID), "").strip()
+    kept = [f.model_copy() for f in analysis.existing_furniture if f.action == "keep"]
+    removed = [f.model_copy() for f in analysis.existing_furniture if f.action == "remove"]
+    new = [
+        FurnitureItem(name=f"{style} two-seat sofa", category="sofa", description="Compact, raised legs", color="neutral",
+                      size="150 x 85 cm", action="replace", reason="Replaces the three-seater so the walkway stays clear."),
+        FurnitureItem(name="Nesting coffee tables", category="coffee table", description="Pair that tucks away", color="wood",
+                      size="60 x 60 cm", action="replace", reason="Replaces the oversized table."),
+        FurnitureItem(name="Framed wall art", category="wall art", description="Set of two prints", color="neutral",
+                      size="50 x 70 cm", action="add", reason="Adds interest without using floor space."),
+        FurnitureItem(name="Floor plant", category="plant", description="Tall, in a woven basket", color="green",
+                      size="35 x 35 cm", action="add", reason="Softens the corner by the window."),
+    ]
     prompt = (
-        f"Photorealistic interior photograph of a redesigned {analysis.room_type} in a {style} style, "
-        f"same windows and proportions as the original, wide eye-level shot. A new low-profile sofa "
-        f"anchors the seating over a large flat-weave rug, paired with a clean-lined coffee table, "
-        f"an accent chair, a slim floor lamp and layered table lighting. "
-        f"{'Generous closed storage plus open shelving keep it tidy. ' if wants_storage else 'Open shelving adds light storage. '}"
-        f"{'An extra armchair expands the seating. ' if wants_seating else ''}"
-        f"Framed art, a leafy plant and soft textiles finish it. Palette: {palette}. "
-        f"{f'Also, as the homeowner asked: {extra}. ' if extra else ''}"
-        f"Bright, tidy, magazine-quality daylight."
+        f"Restyle the furniture in a {style} style: a compact two-seat sofa, nesting coffee tables, "
+        f"framed prints and a tall plant. {', '.join(f.name for f in kept) or 'Existing lamp and rug'} "
+        f"stay unchanged; {', '.join(f.name for f in removed) or 'surplus pieces'} removed, leaving clear floor. "
+        f"{f'Also: {extra}. ' if extra else ''}Bright, tidy, natural daylight."
     )
-
-    items = [
-        FurnitureItem(name=f"{style} low-profile sofa", category="sofa", description="Three-seat, clean lines", color="neutral"),
-        FurnitureItem(name="Accent armchair", category="armchair", description="Extra seating by the window", color="accent"),
-        FurnitureItem(name="Coffee table", category="coffee table", description="Clean-lined, wood or stone top", color="wood"),
-        FurnitureItem(name="Side table", category="side table", description="Next to the armchair", color="wood"),
-        FurnitureItem(name="Large area rug", category="rug", description="Anchors the seating group", color="neutral"),
-        FurnitureItem(name="Arc floor lamp", category="floor lamp", description="Reading light over the sofa", color="black"),
-        FurnitureItem(name="Table lamp", category="table lamp", description="Warm ambient light", color="ceramic"),
-        FurnitureItem(name="Media console", category="console", description="Closed storage for the TV wall", color="wood"),
-        FurnitureItem(name="Open shelving unit", category="bookshelf", description="Display + light storage", color="wood"),
-        FurnitureItem(name="Framed wall art", category="wall art", description="Set of two prints", color="neutral"),
-        FurnitureItem(name="Floor plant", category="plant", description="Tall, in a woven basket", color="green"),
-    ]
-    return prompt, items
+    return prompt, kept + new + removed
 
 
-def _mock_modify_prompt(
-    analysis: RoomAnalysis, instruction: str
-) -> tuple[str, list[FurnitureItem]]:
-    """Deterministic mock for the "Modify Existing Room" flow. Unlike the
-    from-scratch mock above, this one is built directly around the user's own
-    instruction text, so even without a live model the sample redesign
-    visibly reflects what they actually asked for."""
-    existing = analysis.existing_furniture or [
-        FurnitureItem(name="Sofa", category="sofa", description="Existing seating", color="neutral"),
-        FurnitureItem(name="Coffee table", category="coffee table", description="Existing table", color="wood"),
-    ]
-    kept_desc = ", ".join(f.name for f in existing[:5]) or "the existing furniture"
-    instruction = instruction.strip()
-
+def _mock_modify_prompt(analysis: RoomAnalysis, instruction: str) -> tuple[str, list[FurnitureItem]]:
+    items = [f.model_copy() for f in analysis.existing_furniture]
+    for f in items:
+        f.action = f.action or "keep"
     prompt = (
-        f"Photorealistic interior photograph of the same {analysis.room_type}, same windows, "
-        f"doors and proportions as the original — a targeted redesign, not a full replacement. "
-        f'Apply this change exactly: "{instruction}". Keep {kept_desc} as they are except where '
-        f"the instruction above says otherwise. Tidy styling, natural daylight, magazine-quality, "
-        f"no text, no watermark, no people."
-    )
-
-    items = [
-        FurnitureItem(
-            name=f.name,
-            category=f.category,
-            description=(f"{f.description} — kept unless the instruction changes it").strip(" —"),
-            color=f.color,
-        )
-        for f in existing
-    ]
-    items.append(
-        FurnitureItem(
-            name="Styling per your instruction",
-            category="decor",
-            description=(
-                f'Reflects: "{instruction[:120]}" '
-                "(Mock — set ANTHROPIC_API_KEY in backend/.env for a real one.)"
-            ),
-            color="",
-        )
+        f'Apply this change exactly: "{instruction.strip()}". Keep every other piece of furniture as it is. '
+        "Tidy styling, natural daylight."
     )
     return prompt, items

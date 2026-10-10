@@ -40,11 +40,41 @@ BUDGET_TIGHT_MESSAGE = (
 )
 
 
+# What the designer recommends doing with a piece. Existing pieces get
+# keep / replace / remove; pieces in the redesign plan can also be "add".
+VALID_ACTIONS = ("keep", "replace", "remove", "add")
+
+# Optional room-size hint the user can give on upload. A photo alone can't be
+# measured, so this is the reliable way to get recommendations scaled to a
+# genuinely small room; "" means "estimate it from the photo".
+ROOM_SIZES = {
+    "small": "Small, about 100 sq ft (roughly 10 x 10 ft)",
+    "medium": "Medium, about 150-200 sq ft",
+    "large": "Large, 250 sq ft or more",
+}
+
+
 class FurnitureItem(BaseModel):
     name: str = ""
     category: str = Field(default="", description="e.g. sofa, coffee table, rug, floor lamp")
     description: str = ""
     color: str = ""
+    # keep | replace | remove | add ("" when the model gave no verdict)
+    action: str = ""
+    # one short sentence: why this piece suits / doesn't suit this room
+    reason: str = ""
+    # approximate footprint, e.g. "150 x 85 cm" — helps judge fit in small rooms
+    size: str = ""
+
+
+class RoomStructure(BaseModel):
+    """The fixed architecture visible in the photo. This is what the redesign
+    must NOT change, so it is listed explicitly, sent to the image model as a
+    lock list, and checked against the rendered result afterwards."""
+    windows: list[str] = []  # one entry per window: where it is + what it looks like
+    doors: list[str] = []  # one entry per door / doorway / opening
+    stairs: str = ""  # "" when there are none
+    other_fixed: list[str] = []  # beams, columns, fireplace, built-ins, ceiling fan ...
 
 
 class RoomAnalysis(BaseModel):
@@ -54,6 +84,12 @@ class RoomAnalysis(BaseModel):
     layout_notes: str = ""
     lighting: str = ""
     detected_colors: list[str] = []
+    structure: RoomStructure = RoomStructure()
+    # "small" | "medium" | "large", plus a human-readable estimate
+    size_class: str = ""
+    size_estimate: str = ""
+    # True when the size came from the user rather than a guess from the photo
+    size_from_user: bool = False
 
 
 class Question(BaseModel):
@@ -65,6 +101,8 @@ class Question(BaseModel):
     options: list[str] = []
     multi: bool = False
     optional: bool = False
+    # one line of room-specific guidance shown under the prompt
+    hint: str = ""
 
 
 # ---- /api/upload ------------------------------------------------------------
@@ -105,6 +143,19 @@ class GenerateRequest(BaseModel):
     session_id: str
 
 
+class ShopLink(BaseModel):
+    retailer: str
+    url: str
+
+
+class StructureCheck(BaseModel):
+    """Result of comparing the render against the original photo's
+    architecture. status: passed | corrected | mismatch | skipped."""
+    status: str = "skipped"
+    issues: list[str] = []
+    attempts: int = 1
+
+
 class ProductMatch(BaseModel):
     item: str
     category: str
@@ -118,6 +169,9 @@ class ProductMatch(BaseModel):
     image: str
     style_tags: list[str] = []
     match_score: float = 0.0
+    # replace | add — why this piece is on the shopping list
+    action: str = ""
+    shop_links: list[ShopLink] = []
 
 
 class ProductRecommendation(BaseModel):
@@ -135,6 +189,7 @@ class ProductRecommendation(BaseModel):
     url: str
     image: str = ""
     score: Optional[float] = None
+    shop_links: list[ShopLink] = []
 
 
 class RecapItem(BaseModel):
@@ -166,6 +221,9 @@ class GenerateResponse(BaseModel):
     # session never goes through /api/upload — the "new" flow instead gets the
     # original photo URL from its earlier UploadResponse.
     original_image_url: str = ""
+    # The analysed room, incl. keep/replace verdicts on the existing furniture.
+    analysis: Optional[RoomAnalysis] = None
+    structure_check: StructureCheck = StructureCheck()
 
 
 # ---- /api/products/match ------------------------------------------------------------

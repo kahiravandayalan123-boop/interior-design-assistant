@@ -1,39 +1,34 @@
-"""POST /api/generate — turn the analysis + style + answers into a DALL-E
-prompt, generate the redesigned image, and match the planned furniture against
-the local product catalogue.
+"""POST /api/generate — turn the analysis + style + answers into a redesign
+plan, render it onto the user's own photo (with an architecture check), and
+build the shopping list for the pieces being bought.
 
 The generated image is always persisted under our own /media/generated/ path
 (never a provider's ephemeral URL), so the before/after slider and the
-download button work identically for the mock placeholder today and the real
-DALL-E output once OPENAI_API_KEY is set — no frontend change needed either way.
+download button work without CORS or expiring links.
 """
 from __future__ import annotations
-
-import uuid
 
 from fastapi import APIRouter, HTTPException, Request
 
 from ..config import get_settings
 from ..schemas import GenerateRequest, GenerateResponse, Question, RecapItem, RoomAnalysis
-from ..services import claude_service, image_service, recommendation_service
+from ..services import claude_service
 from ..services.errors import ServiceError
-from ..services.product_service import match_products
-from ..services.upload_validate import sniff
+from ..services.image_prep import size_of
+from ..services.pipeline import STRUCTURE_WARNING, render_checked, save_render, shopping
 from ..store import get_session, update_session
 
 router = APIRouter(prefix="/api", tags=["generate"])
 settings = get_settings()
 
 
-def _load_upload(filename: str | None) -> tuple[bytes | None, str]:
+def _load_upload(filename: str | None) -> bytes | None:
     if not filename or "/" in filename or "\\" in filename or ".." in filename:
-        return None, ""
+        return None
     try:
-        data = (settings.upload_dir / filename).read_bytes()
+        return (settings.upload_dir / filename).read_bytes()
     except OSError:
-        return None, ""
-    sniffed = sniff(data)
-    return (data, sniffed[0]) if sniffed else (None, "")
+        return None
 
 
 # Plain `def` so the slow provider calls run in a worker thread (see upload.py).
@@ -58,48 +53,38 @@ def generate(req: GenerateRequest, request: Request):
 
     analysis = RoomAnalysis(**session["analysis"])
     style = session["style"]
-    warnings: list[str] = list(session.get("warnings", []))
+    warnings: list[str] = []
 
     extra_request = (session.get("extra_request") or "").strip()
     prompt_answers = answers + (
         [{"question_id": claude_service.EXTRA_REQUEST_ID, "answer": extra_request}] if extra_request else []
     )
 
-    # The user's own photo is the base the redesign is drawn on, so the room's
-    # layout carries over. Uploads live on local disk, so a restart can lose it;
-    # then we still render from the text prompt, but say so.
-    source, source_type = _load_upload(session.get("image_filename"))
-    if source is None:
-        missing = "Your original photo wasn't available, so the redesign is based on the description only."
-        if missing not in warnings:
-            warnings.append(missing)
+    # The user's own photo is the base the redesign is drawn on. Uploads live
+    # on local disk, so without it we refuse rather than invent a room from text.
+    source = _load_upload(session.get("image_filename"))
+    if source is None and settings.openai_ready:
+        raise HTTPException(
+            404, "Your photo is no longer on the server (it may have restarted). Please start over."
+        )
 
     try:
-        prompt, planned, _mock_p, warn_p = claude_service.build_image_prompt(analysis, style, prompt_answers)
-        image = image_service.generate_image(
-            prompt, style, analysis.room_type, source_image=source, source_media_type=source_type
+        prompt, planned, _, _ = claude_service.build_image_prompt(analysis, style, prompt_answers, questions)
+        image, check = render_checked(
+            prompt, style, analysis, source, "image/jpeg",
+            session.get("image_size") or (size_of(source) if source else None),
         )
     except ServiceError as se:
         raise HTTPException(se.status_code, se.user_message)
 
-    if warn_p and warn_p not in warnings:
-        warnings.append(warn_p)
-    if image.warning and image.warning not in warnings:
-        warnings.append(image.warning)
+    if check.status == "mismatch":
+        warnings.append(STRUCTURE_WARNING.format(issues="; ".join(check.issues)))
 
-    ext = ".png" if "png" in image.content_type else ".jpg"
-    fname = f"{uuid.uuid4().hex}{ext}"
-    try:
-        (settings.generated_dir / fname).write_bytes(image.data)
-    except OSError:
-        raise HTTPException(500, "Couldn't save the generated image on the server. Please try again.")
+    fname = save_render(image)
     image_url = request.app.url_path_for("serve_generated", filename=fname)
 
     budget = next((a["answer"] for a in answers if a["question_id"] == "budget"), None)
-    matches, product_matches_note = match_products(planned, style=style, budget=budget)
-    estimated_total = round(sum(m.price for m in matches), 2)
-    recommendations, recommendations_note = recommendation_service.get_recommendations(prompt, budget=budget)
-    recommendations_total = round(sum(r.price for r in recommendations), 2)
+    matches, note, total, recs, rec_note, rec_total = shopping(planned, prompt, style, budget, analysis)
 
     answers_map = {a["question_id"]: a["answer"] for a in answers}
     recap = [
@@ -110,7 +95,7 @@ def generate(req: GenerateRequest, request: Request):
     if extra_request:
         recap.append(RecapItem(id="instruction", kind="instruction", question="Requested change", answer=extra_request))
 
-    mock = image.mock or bool(warn_p) or not (settings.anthropic_ready and settings.openai_ready)
+    mock = image.mock or not (settings.anthropic_ready and settings.openai_ready)
 
     update_session(
         req.session_id,
@@ -120,6 +105,7 @@ def generate(req: GenerateRequest, request: Request):
             "generated_filename": fname,
             "planned_furniture": [p.model_dump() for p in planned],
             "product_matches": [m.model_dump() for m in matches],
+            "structure_check": check.model_dump(),
             "warnings": warnings,
         },
     )
@@ -132,12 +118,14 @@ def generate(req: GenerateRequest, request: Request):
         image_is_mock=image.mock,
         planned_furniture=planned,
         product_matches=matches,
-        product_matches_note=product_matches_note,
-        recommendations=recommendations,
-        recommendations_total=recommendations_total,
-        recommendations_note=recommendations_note,
+        product_matches_note=note,
+        recommendations=recs,
+        recommendations_total=rec_total,
+        recommendations_note=rec_note,
         recap=recap,
-        estimated_total=estimated_total,
+        estimated_total=total,
         mock=mock,
         warnings=warnings,
+        analysis=analysis,
+        structure_check=check,
     )

@@ -5,15 +5,22 @@ import RecommendationList from "./RecommendationList.jsx";
 import BeforeAfterSlider from "./BeforeAfterSlider.jsx";
 import RecapCard from "./RecapCard.jsx";
 import Spinner from "./Spinner.jsx";
+import VerdictList, { VerdictSummary } from "./Verdicts.jsx";
 import { onImgError } from "../placeholder.js";
+
+const CHECK = {
+  passed: ["ok", "Architecture check passed", "Windows, doors and walls match your original photo."],
+  corrected: ["ok", "Architecture check passed on the second render", "The first render altered the room, so it was redone and re-checked."],
+  mismatch: ["warn", "Architecture differs from your photo", ""],
+};
 
 export default function ResultView({ result, originalUrl, onRestart }) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
-  const [view, setView] = useState("side"); // "side" | "slider"
-  const total =
-    result.estimated_total ??
-    result.product_matches.reduce((s, m) => s + (m.price || 0), 0);
+  const [view, setView] = useState("slider"); // "slider" | "side"
+  const total = result.estimated_total ?? 0;
+  const check = CHECK[result.structure_check?.status];
+  const plan = result.planned_furniture || [];
 
   async function handleDownload() {
     setDownloading(true);
@@ -32,91 +39,111 @@ export default function ResultView({ result, originalUrl, onRestart }) {
   }
 
   return (
-    <div className="card">
-      <h2>Your redesign</h2>
-      <p className="card-sub">Your original room next to the AI redesign.</p>
-
-      {result.image_is_mock && (
-        <p className="mock-tag">
-          Sample preview — add a real <code>OPENAI_API_KEY</code> to backend/.env and
-          regenerate for an actual AI-rendered room.
+    <>
+      <div className="card">
+        <p className="eyebrow">Your redesign</p>
+        <h2>Same room, restyled</h2>
+        <p className="card-sub">
+          The redesign is painted onto your own photo, so the walls, windows and doors stay put.
         </p>
-      )}
 
-      {originalUrl && (
-        <div className="view-toggle" role="group" aria-label="Comparison view">
-          <button type="button" aria-pressed={view === "side"} onClick={() => setView("side")}>
-            Side by side
+        {result.image_is_mock && (
+          <p className="mock-tag">Sample preview — image generation isn't configured on this server.</p>
+        )}
+
+        {originalUrl && (
+          <div className="view-toggle" role="group" aria-label="Comparison view">
+            <button type="button" aria-pressed={view === "slider"} onClick={() => setView("slider")}>
+              Slider
+            </button>
+            <button type="button" aria-pressed={view === "side"} onClick={() => setView("side")}>
+              Side by side
+            </button>
+          </div>
+        )}
+
+        {originalUrl && view === "side" ? (
+          <div className="compare">
+            <figure>
+              <img src={mediaUrl(originalUrl)} alt="Your original room" onError={onImgError} />
+              <figcaption>Before</figcaption>
+            </figure>
+            <figure>
+              <img src={mediaUrl(result.generated_image_url)} alt="AI redesign" onError={onImgError} />
+              <figcaption>After</figcaption>
+            </figure>
+          </div>
+        ) : (
+          <>
+            <BeforeAfterSlider
+              before={originalUrl ? mediaUrl(originalUrl) : ""}
+              after={mediaUrl(result.generated_image_url)}
+            />
+            {originalUrl && <p className="ba-caption">Drag the handle to compare before and after</p>}
+          </>
+        )}
+
+        {check && (
+          <div className={`check check-${check[0]}`}>
+            <span className="check-icon" aria-hidden="true">{check[0] === "ok" ? "✓" : "!"}</span>
+            <div>
+              <strong>{check[1]}</strong>
+              <span>
+                {check[2] || `${result.structure_check.issues.join(" ")} Use the image as a furniture and styling guide.`}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="actions">
+          <button className="primary" type="button" onClick={handleDownload} disabled={downloading}>
+            {downloading && <Spinner />}
+            {downloading ? "Preparing download…" : "Download image"}
           </button>
-          <button type="button" aria-pressed={view === "slider"} onClick={() => setView("slider")}>
-            Slider
-          </button>
+          <button className="ghost" type="button" onClick={onRestart}>Start over</button>
         </div>
-      )}
-
-      {originalUrl && view === "side" ? (
-        <div className="compare">
-          <figure>
-            <span className="img-label">Before</span>
-            <img src={mediaUrl(originalUrl)} alt="Your original room" onError={onImgError} />
-          </figure>
-          <figure>
-            <span className="img-label">After</span>
-            <img src={mediaUrl(result.generated_image_url)} alt="AI redesign" onError={onImgError} />
-          </figure>
-        </div>
-      ) : (
-        <>
-          <BeforeAfterSlider
-            before={originalUrl ? mediaUrl(originalUrl) : ""}
-            after={mediaUrl(result.generated_image_url)}
-          />
-          {originalUrl && <p className="ba-caption">Drag · or focus the handle and use ← →</p>}
-        </>
-      )}
-
-      <div className="actions">
-        <button className="primary" type="button" onClick={handleDownload} disabled={downloading}>
-          {downloading && <Spinner />}
-          {downloading ? "Preparing download…" : "Download image"}
-        </button>
+        {downloadError && <p className="err-inline">{downloadError}</p>}
       </div>
-      {downloadError && <p className="err-inline">{downloadError}</p>}
 
-      <h3>Your choices</h3>
-      <RecapCard style={result.style} recap={result.recap} />
+      <div className="card">
+        <p className="eyebrow">The plan</p>
+        <h2>What to keep and what to change</h2>
+        <p className="card-sub">
+          Each piece judged against your room's size and layout
+          {result.analysis?.size_estimate ? ` (${result.analysis.size_estimate})` : ""}.
+        </p>
+        <VerdictSummary items={plan} />
+        <VerdictList items={plan} />
 
-      <h3>Image prompt</h3>
-      <div className="promptbox">{result.image_prompt}</div>
+        <h3>Your choices</h3>
+        <RecapCard style={result.style} recap={result.recap} />
 
-      <h3>
-        Shopping list ({result.product_matches.length} items · ~₹
-        {total.toLocaleString("en-IN")})
-      </h3>
-      {result.product_matches_note && (
-        <p className="mock-tag">{result.product_matches_note}</p>
-      )}
-      <ProductList matches={result.product_matches} />
-
-      {result.recommendations?.length > 0 && (
-        <>
-          <h3>
-            Recommended for you ({result.recommendations.length} items · ~₹
-            {(result.recommendations_total ?? 0).toLocaleString("en-IN")})
-          </h3>
-          <p className="card-sub">
-            More pieces from our catalogue, matched to your redesign by similarity.
-          </p>
-          {result.recommendations_note && (
-            <p className="mock-tag">{result.recommendations_note}</p>
-          )}
-          <RecommendationList recommendations={result.recommendations} />
-        </>
-      )}
-
-      <div className="actions">
-        <button className="ghost" onClick={onRestart}>Start over</button>
+        <details className="brief">
+          <summary>See the brief sent to the image model</summary>
+          <div className="promptbox">{result.image_prompt}</div>
+        </details>
       </div>
-    </div>
+
+      <div className="card">
+        <p className="eyebrow">Shopping list</p>
+        <h2>
+          {result.product_matches.length
+            ? `${result.product_matches.length} piece${result.product_matches.length > 1 ? "s" : ""} to buy · about ₹${total.toLocaleString("en-IN")}`
+            : "Nothing to buy"}
+        </h2>
+        <p className="card-sub">
+          Only the pieces the plan replaces or adds. Links open live searches on real stores; prices are estimates.
+        </p>
+        {result.product_matches_note && <p className="mock-tag">{result.product_matches_note}</p>}
+        <ProductList matches={result.product_matches} />
+
+        {result.recommendations?.length > 0 && (
+          <>
+            <h3>Optional extras within your remaining budget</h3>
+            <RecommendationList recommendations={result.recommendations} />
+          </>
+        )}
+      </div>
+    </>
   );
 }

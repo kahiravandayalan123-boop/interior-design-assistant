@@ -16,6 +16,7 @@ import logging
 
 from ..schemas import BUDGET_TIGHT_MESSAGE, ProductRecommendation, parse_budget_amount
 from . import vector_store
+from .shop_links import shop_links
 
 logger = logging.getLogger("interior_design_assistant.recommendations")
 
@@ -25,7 +26,19 @@ DEFAULT_TOP_K = 6
 POOL_SIZE = 24
 
 
+# Floor-hungry categories that shouldn't be suggested as extras for a small room.
+_LARGE = ("sofa", "armchair", "dining table", "dining chair", "sideboard", "bookshelf", "console", "bench", "coffee table")
+
+
+def _excluded(category: str, exclude: set[str], small_room: bool) -> bool:
+    cat = (category or "").lower()
+    if small_room and any(big in cat for big in _LARGE):
+        return True
+    return any(e and (e in cat or cat in e) for e in exclude)
+
+
 def _to_recommendation(hit: dict) -> ProductRecommendation:
+    links = shop_links(hit.get("name", ""), "", hit.get("category", ""))
     return ProductRecommendation(
         product_id=hit["product_id"],
         name=hit.get("name", ""),
@@ -35,14 +48,16 @@ def _to_recommendation(hit: dict) -> ProductRecommendation:
         currency=hit.get("currency", "INR"),
         brand=hit.get("brand", ""),
         retailer=hit.get("retailer", ""),
-        url=hit.get("url", ""),
+        url=links[0].url,
+        shop_links=links,
         image=hit.get("image", ""),
         score=hit.get("score"),
     )
 
 
 def get_recommendations(
-    query_text: str, budget: str | None = None, top_k: int = DEFAULT_TOP_K
+    query_text: str, budget: str | None = None, top_k: int = DEFAULT_TOP_K,
+    exclude_categories: set[str] | None = None, small_room: bool = False,
 ) -> tuple[list[ProductRecommendation], str | None]:
     """Returns ``(recommendations, note)``. ``note`` is ``None`` unless the
     budget caused items to be dropped or a fallback to cheaper items ran."""
@@ -54,10 +69,14 @@ def get_recommendations(
     logger.debug("get_recommendations: budget=%r -> budget_amount=%r, top_k=%d", budget, budget_amount, top_k)
 
     try:
-        hits = vector_store.query(text, top_k=POOL_SIZE if budget_amount is not None else top_k)
+        hits = vector_store.query(text, top_k=POOL_SIZE)
     except Exception:
         logger.exception("Product recommendation lookup failed; omitting recommendations.")
         return [], None
+    # Extras only: nothing in a category the plan already keeps, removes or
+    # buys, and nothing bulky for a small room.
+    exclude = {c.lower() for c in (exclude_categories or set())}
+    hits = [h for h in hits if not _excluded(h.get("category", ""), exclude, small_room)]
 
     if budget_amount is None:
         logger.debug("get_recommendations: no budget cap -> returning top %d of %d hits unfiltered", top_k, len(hits))
@@ -81,29 +100,7 @@ def get_recommendations(
             any_skipped = True
             logger.debug("  skip %s ₹%.0f (would be ₹%.0f > ₹%.0f)", hit.get("product_id"), price, running_total + price, budget_amount)
 
-    note = None
-    if not selected:
-        logger.debug("get_recommendations: nothing fit -> cheapest-item fallback")
-        try:
-            catalogue = vector_store.all_products()
-        except Exception:
-            logger.exception("Could not load catalogue for the budget fallback pass.")
-            catalogue = []
-        cheap_sorted = sorted(catalogue, key=lambda p: p.get("price", float("inf")))
-        for product in cheap_sorted:
-            if len(selected) >= top_k:
-                break
-            price = float(product.get("price", 0.0))
-            if running_total + price <= budget_amount:
-                selected.append(product)
-                running_total += price
-        if not selected and cheap_sorted:
-            # Even the single cheapest catalogue item exceeds the budget —
-            # best effort: show it anyway rather than nothing at all.
-            selected = [cheap_sorted[0]]
-        note = BUDGET_TIGHT_MESSAGE
-    elif any_skipped:
-        note = BUDGET_TIGHT_MESSAGE
+    note = BUDGET_TIGHT_MESSAGE if (any_skipped and selected) else None
 
     logger.debug("get_recommendations: result %d items, total=₹%.0f, note=%r",
                  len(selected), sum(float(h.get("price", 0.0)) for h in selected), note)
