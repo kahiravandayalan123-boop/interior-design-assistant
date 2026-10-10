@@ -7,6 +7,7 @@ import {
   generateRedesign,
 } from "./api.js";
 import LandingScreen from "./components/LandingScreen.jsx";
+import Hero from "./components/Hero.jsx";
 import UploadStep from "./components/UploadStep.jsx";
 import ModifyStep from "./components/ModifyStep.jsx";
 import AnalysisCard from "./components/AnalysisCard.jsx";
@@ -180,17 +181,9 @@ export default function App() {
   const mockSub = cfg?.using_mock ? "Running on sample data, so this will be quick." : null;
 
   return (
-    <div className="wrap">
+    <div className={step === "landing" ? "wrap wrap-wide" : "wrap"}>
       {step === "landing" ? (
-        <header className="hero">
-          <h1>AI Interior Design Assistant</h1>
-          <p className="hero-tagline">See your own room, redesigned.</p>
-          <p className="hero-sub">
-            Upload a photo. Get an honest verdict on the furniture you already
-            have, a redesign painted onto your actual room, and a shopping list
-            sized to your space and budget.
-          </p>
-        </header>
+        <Hero />
       ) : (
         <>
           <header className="page-title">

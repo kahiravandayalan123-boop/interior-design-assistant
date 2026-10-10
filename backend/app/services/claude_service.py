@@ -229,7 +229,6 @@ def _adaptive_questions(analysis: RoomAnalysis, style: str) -> list[Question]:
     ).lower()
 
     seating = [f for f in analysis.existing_furniture if f.category.lower() in _SEATING_CATS]
-    small = any(k in text for k in ("small", "tight", "narrow", "cramped", "compact", "reads small", "limited space"))
     dark = any(k in text for k in ("dark", "dim", "limited natural", "north-facing", "low light", "little light", "no window"))
     cluttered = any(k in text for k in ("clutter", "crowded", "overcrowd", "messy", "no storage", "not much storage", "lacks storage"))
     colors = [c for c in analysis.detected_colors if c][:3]
@@ -251,29 +250,24 @@ def _adaptive_questions(analysis: RoomAnalysis, style: str) -> list[Question]:
             options=["A sofa", "Sofa + an armchair", "A sectional", "Just a pair of chairs"],
         ))
 
-    if small:
-        pool.append(Question(
-            id="space", kind="space",
-            prompt="The room reads a little tight — what's the priority?",
-            options=["Maximise open floor space", "Work in more storage",
-                     "Still fit more seating", "Keep it airy and pared-back"],
-        ))
-    else:
-        pool.append(Question(
-            id="priorities", kind="priorities",
-            prompt="What matters most for the redesign?",
-            options=["More open space", "More storage", "More seating",
-                     "Better lighting", "More display / decor"],
-        ))
-
-    if dark:
-        pool.append(Question(
-            id="lighting", kind="lighting",
-            prompt="Lighting looks limited in here — how should we handle it?",
-            options=["Layered lighting (lamps + overhead)", "Lighter colours to bounce light",
-                     "One statement fixture", "Keep it warm and moody"],
-        ))
-    elif cluttered:
+    # Priorities and Lighting are asked for every room, always with the same
+    # options, so the step is identical from one room to the next.
+    pool.append(Question(
+        id="priorities", kind="priorities",
+        prompt="What matters most for the redesign?",
+        options=["More open space", "More storage", "More seating",
+                 "Better lighting", "More display / decor"],
+    ))
+    pool.append(Question(
+        id="lighting", kind="lighting",
+        prompt=(
+            "Lighting looks limited in here — how should we handle it?" if dark
+            else "How should we handle the lighting?"
+        ),
+        options=["Layered lighting (lamps + overhead)", "Lighter colours to bounce light",
+                 "One statement fixture", "Keep it warm and moody"],
+    ))
+    if cluttered:
         pool.append(Question(
             id="storage", kind="storage",
             prompt="How much storage do you need?",

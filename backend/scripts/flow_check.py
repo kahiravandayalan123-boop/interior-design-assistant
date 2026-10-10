@@ -100,7 +100,7 @@ def main():
           all(f["action"] in ("keep", "replace", "remove") and f["reason"] for f in a["existing_furniture"]))
     ids = [q["id"] for q in u["questions"]]
     print("  questions:", [(q["prompt"], q["options"]) for q in u["questions"]])
-    check("original question set (budget, seating, ...)", ids[:2] == ["budget", "seating"] and "colors" in ids, str(ids))
+    check("original question set (budget, seating, ...)", ids[:4] == ["budget", "seating", "priorities", "lighting"] and "colors" in ids, str(ids))
     check("all single-select, no duplicate options within a question",
           not any(q["multi"] for q in u["questions"]) and all(len(q["options"]) == len(set(q["options"])) for q in u["questions"]))
 
@@ -128,7 +128,7 @@ def main():
         check("modify upload ok", r.status_code == 200)
         mu = r.json()
         mids = [q["id"] for q in mu["questions"]]
-        check("modify flow gets the same structured questions", mids[:2] == ["budget", "seating"] and "colors" in mids, str(mids))
+        check("modify flow gets the same structured questions", mids[:4] == ["budget", "seating", "priorities", "lighting"] and "colors" in mids, str(mids))
         manswers = [{"question_id": q["id"], "answer": "₹20,000" if q["id"] == "budget" else q["options"][0]}
                     for q in mu["questions"] if not q["optional"]]
         c.post("/api/chat", json={"session_id": mu["session_id"], "answers": manswers})
