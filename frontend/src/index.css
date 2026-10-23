@@ -87,6 +87,22 @@ button { font-family: inherit; }
 .page-title { text-align: center; margin: 12px 0 28px; }
 .page-title h1 { margin: 0; font-weight: 800; font-size: 26px; letter-spacing: -0.03em; }
 
+/* ---------- Brand logo (icon mark + wordmark) ---------- */
+.brand-logo { display: inline-flex; align-items: center; gap: 14px; }
+.brand-logo-mark { flex: 0 0 auto; display: block; }
+.brand-wordmark { display: flex; flex-direction: column; line-height: 1.08; text-align: left; }
+.brand-wordmark-line { font-weight: 800; letter-spacing: -0.03em; font-size: 0.62em; }
+.brand-wordmark-ink { color: var(--ink); }
+.brand-wordmark-clay { color: var(--clay); }
+.brand-wordmark-tagline { margin-top: 6px; font-size: 0.32em; font-weight: 600; font-style: italic; color: var(--muted); letter-spacing: -0.01em; }
+
+.hero h1.hero-logo-heading { margin: 0 0 20px; font-size: 1em; line-height: 1; letter-spacing: normal; }
+.hero-logo-heading .brand-wordmark-line { font-size: clamp(30px, 3.6vw, 44px); }
+
+.page-title h1.page-title-logo { display: inline-flex; font-size: 1em; }
+.page-title-logo .brand-wordmark-line { font-size: 17px; }
+.page-title-logo .brand-wordmark-tagline { display: none; }
+
 /* ---------- Stepper ---------- */
 .stepper { display: flex; align-items: flex-start; justify-content: center; margin: 0 auto 8px; max-width: 680px; }
 .stepper-item { display: flex; flex-direction: column; align-items: center; flex: 1 1 0; position: relative; gap: 8px; }

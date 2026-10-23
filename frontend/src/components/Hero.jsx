@@ -1,4 +1,5 @@
 import BeforeAfterSlider from "./BeforeAfterSlider.jsx";
+import Logo from "./Logo.jsx";
 
 const POINTS = [
   "Keeps your real walls, windows and doors",
@@ -11,8 +12,8 @@ export default function Hero() {
   return (
     <header className="hero">
       <div className="hero-copy">
-        <h1>
-          AI Interior <span>Design</span> Assistant
+        <h1 className="hero-logo-heading">
+          <Logo size={64} />
         </h1>
         <p className="hero-tagline">See your own room, redesigned.</p>
         <p className="hero-sub">

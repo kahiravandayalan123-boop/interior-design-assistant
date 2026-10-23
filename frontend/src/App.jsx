@@ -8,6 +8,7 @@ import {
 } from "./api.js";
 import LandingScreen from "./components/LandingScreen.jsx";
 import Hero from "./components/Hero.jsx";
+import Logo from "./components/Logo.jsx";
 import UploadStep from "./components/UploadStep.jsx";
 import ModifyStep from "./components/ModifyStep.jsx";
 import AnalysisCard from "./components/AnalysisCard.jsx";
@@ -187,7 +188,9 @@ export default function App() {
       ) : (
         <>
           <header className="page-title">
-            <h1>AI Interior Design Assistant</h1>
+            <h1 className="page-title-logo">
+              <Logo size={32} />
+            </h1>
           </header>
           <Stepper current={currentStep} />
         </>
